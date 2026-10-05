@@ -10,9 +10,9 @@ Local potential problems are essentially all problems for which we can do such a
 
 ## New result
 
-Tight $ \tilde{O}(\min\{\Delta , \sqrt{n}\})$ upperbound for LOC.
+Tight $\tilde{O}(\min\{\Delta , \sqrt{n}\})$ upperbound for LOC.
 
-$ \tilde{O}(\min\{K\Delta^r , \sqrt{Kn}\})$ upperbound for generic local potential problems with radius $r$ and local scale $K$.
+$\tilde{O}(\min\{K\Delta^r , \sqrt{Kn}\})$ upperbound for generic local potential problems with radius $r$ and local scale $K$.
 
 $\Omega(\Delta^{r+1})$ Lowerbound for LOC with a larger radius ($r=1$ gives the usual LOC), showing that the $\Delta$ dependence in the generic upperbound is tight.
 
