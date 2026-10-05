@@ -1,6 +1,6 @@
 # DA Slop
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23081953.svg)](https://doi.org/10.5281/zenodo.23081953)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23170642.svg)](https://doi.org/10.5281/zenodo.23170642)
 
 This is a repository of ***AI-generated research results*** related to the field of ***distributed algorithms***.
 
