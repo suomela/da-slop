@@ -12,20 +12,20 @@ Graph family: $d$-dimensional grids.
 
 Ignoring possible $O(\log^* n)$ factors, we have the following bounds:
 
-- $\Omega(d)$ locality needed
+- $\Omega(d)$ locality needed.
 - $2^{O(d)}$ locality sufficient.
 
 ## Prior work
 
 There is an algorithm with locality $2^{O(d^2)}$; see [Brandt, Hirvonen, Korhonen, Lempiäinen, Östergård, Purcell, Rybicki, Suomela, Uznański, PODC 2017](https://arxiv.org/abs/1702.05456).
 
-## Discovered by
-
-GPT-6 in Codex
-
 ## Documents
 
 - [AI-generated write-up](writeup.pdf)
+
+## Discovered by
+
+GPT-6 in Codex
 
 ## Communicated by
 

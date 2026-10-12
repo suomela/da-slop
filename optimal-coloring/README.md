@@ -14,11 +14,11 @@ A matching worst-case $\Omega(n/\chi(G))$-round lower bound holds for clique-exp
 
 ## Lineage
 
-A question posed several times in recent years is if $\Delta+1$-coloring can be computed in $O(1)$-rounds, for sufficiently high values of $\Delta$, or if there is an $\Omega(\log^* n)$-lower bound matching the known upper bound (Halldorsson, Kuhn, Nolin, Tonoyan, STOC'22).
+A question posed several times in recent years is if $\Delta+1$-coloring can be computed in $O(1)$-rounds, for sufficiently high values of $\Delta$, or if there is an $\Omega(\log^* n)$-lower bound matching the known upper bound (Halldórsson, Kuhn, Nolin, Tonoyan, STOC'22).
 
 In September 2025, Fabian and I answered the former positively for $\Delta = \Omega(n)$, but never wrote it down.
 
-On September 20, I wanted to explore the most basic version and asked Astra and Fable for an O(1)-round algorithm for an $n$-coloring. Astra gave up; Fable barfed. Asked for a $2n$-coloring, Astra gave an algorithm for $n+\tilde{O}(\sqrt{n})$ colors. I saw a way to reduce it to our original question of $\Delta+1$-coloring for $\Delta = 2n/3$. Astra found a way to generalize it to $\Delta = \Omega(n)$. I realized that only one part of the argument needed more than $\chi$ colors and this could be overcome. Astra wrote up the full result.
+On September 20, I wanted to explore the most basic version and asked Astra and Fable for an $O(1)$-round algorithm for an $n$-coloring. Astra gave up; Fable barfed. Asked for a $2n$-coloring, Astra gave an algorithm for $n+\tilde{O}(\sqrt{n})$ colors. I saw a way to reduce it to our original question of $\Delta+1$-coloring for $\Delta = 2n/3$. Astra found a way to generalize it to $\Delta = \Omega(n)$. I realized that only one part of the argument needed more than $\chi$ colors and this could be overcome. Astra wrote up the full result.
 
 ## Documents
 
@@ -44,5 +44,3 @@ Magnús M. Halldórsson
 ## Confidence
 
 I was informally convinced by the original ideas, but have not vetted the writeup.
-
-

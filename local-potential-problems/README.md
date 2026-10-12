@@ -29,7 +29,7 @@ Similarly, their generic upper bound is $O(\Delta^{2r} \cdot \text{poly}(\log n)
 
 ## Discovered by
 
-GPT-6 
+GPT-6
 
 ## Communicated by
 
