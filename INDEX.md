@@ -10,4 +10,4 @@ See [README.md](README.md) for explanations and background.
 | [Bounded-outdegree coloring](bounded-outdegree-coloring/README.md) | Jukka Suomela | F | — |
 | [Coloring grids](coloring-grids/README.md) | Jukka Suomela | H/F | — |
 | [Optimal coloring](optimal-coloring/README.md) | Magnús M. Halldórsson | H | — |
-| [Bounded dependence: dimension-one translation and grid separation](bounded-dependence-metric-control/README.md) | Francesco D'Amore, Timothé Picavet | H | Francesco D'Amore, Timothé Picavet |
+| [From bounded dependence to det-LOCAL](bounded-dependence-metric-control/README.md) | Francesco D'Amore, Timothé Picavet | H | Francesco D'Amore, Timothé Picavet |
