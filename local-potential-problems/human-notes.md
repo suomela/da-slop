@@ -2,8 +2,6 @@
 
 (Notes by Gustav Schmid)
 
-<!-- TODO: Add informal human notes below. Suggested structure: -->
-
 ## Main idea
 
 All of the main ideas were already present in the original paper, but in the original analysis, we paid twice for the ball-growing argument at the heart of the approach. I already knew that the original analysis could be done using only the sequence of improving sets lemma, but I always had a dependence on the diameter of the improving sets. I knew that it should be possible to remove this, and GPT-6 managed to do it.

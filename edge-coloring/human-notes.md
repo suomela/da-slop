@@ -6,9 +6,9 @@
 
 $d$ = degree, $r \ge 2$ is a free parameter.
 
-Our set of old colors is $C = [2^r d]$, we use $c$ to refer to old colors, and $c(e)$ specifically for the old color of edge $e$.
+Our set of old colors is $C = [2^r d]$; we use $c$ to refer to old colors, and $c(e)$ specifically for the old color of edge $e$.
 
-Our set of new colors is $K = [512rd]$, we use $k$ to refer to new colors, and $k(e)$ specifically for the new color of edge $e$.
+Our set of new colors is $K = [512rd]$; we use $k$ to refer to new colors, and $k(e)$ specifically for the new color of edge $e$.
 
 ## Setup
 
@@ -24,7 +24,7 @@ We say that these sets $N(c)$ are ***"expanding"*** if the following holds: if y
 
 $$(1 + b/a)^a \le e^b.$$
 
-Do the binomial expansion of $(1 + b/a)^a$, all terms are nonnegative, so we can just pick one term for this estimate:
+Do the binomial expansion of $(1 + b/a)^a$; all terms are nonnegative, so we can just pick one term for this estimate:
 
 $$(1 + b/a)^a \ge {a \choose b} (b/a)^b.$$
 
@@ -97,7 +97,7 @@ Now if you select any subset of $B$ blue nodes, you will select blue nodes corre
 
 Note that each blue node has $r+1$ strong neighbors and $3r-1$ weak neighbors.
 
-Since $N(c)$ are expanding, if you select any subset $A$ of blue nodes, their "strong + weak" neighborhoods cover at least $3rA$ orange nodes. The "weak" neighborhood can cover at most $(3r-1)A$ orange nodes. So the "strong" neighborhoods must cover at least $A$ orange nodes. To recap, the "strong" neighborhoods of any $A$ blue nodes cover at least $A$ orange nodes. So by Hall's theorem, there is a matching among the "strong" edges of $H'$ that matches all blue nodes with distinct orange nodes. So this way we are able to select for each incident edge $e$ a distinct new color $k(e)$.
+Since $N(c)$ are expanding, if you select any subset of $A$ blue nodes, their "strong + weak" neighborhoods cover at least $3rA$ orange nodes. The "weak" neighborhood can cover at most $(3r-1)A$ orange nodes. So the "strong" neighborhoods must cover at least $A$ orange nodes. To recap, the "strong" neighborhoods of any $A$ blue nodes cover at least $A$ orange nodes. So by Hall's theorem, there is a matching among the "strong" edges of $H'$ that matches all blue nodes with distinct orange nodes. So this way we are able to select for each incident edge $e$ a distinct new color $k(e)$.
 
 ## FIXME: Improvements
 
