@@ -2,11 +2,11 @@
 
 ## Context
 
-Label the nodes with labels 0 and 1, call an edge between a node with label 0 and a node with label 1 a cut edge, then Locally Optimal Cut (LOC) is the problem of assigning 0s and 1s in such a way, that no node can (single handedly) increase the number of cut edges, by changing its label. Note that if a 0/1-assignment is not a solution, then there must exist an "unhappy" node with strictly less than half of its adjacent edges being cut edges.
+Label the nodes with labels 0 and 1, and call an edge between a node with label 0 and a node with label 1 a cut edge. Then Locally Optimal Cut (LOC) is the problem of assigning 0s and 1s in such a way that no node can (single-handedly) increase the number of cut edges, by changing its label. Note that if a 0/1-assignment is not a solution, then there must exist an "unhappy" node with strictly less than half of its adjacent edges being cut edges.
 
-LOC is just one example of a problem where we can prove that a solution always exists using a simple potential argument. Start with an arbitrary solution and let $b<|E|$ be the number of non-cut edges. If the solution is not correct, then there exists an unhappy node that we can 'flip' to decrease the number of non-cut edges. Hence after doing this finitely often we obtain a valid solution. 
+LOC is just one example of a problem where we can prove that a solution always exists using a simple potential argument. Start with an arbitrary solution and let $b\le |E|$ be the number of non-cut edges. If the solution is not correct, then there exists an unhappy node that we can 'flip' to decrease the number of non-cut edges. Hence after doing this finitely often we obtain a valid solution.
 
-Local potential problems are essentially all problems for which we can do such an argument, that is there is some global potential that is just the sum over all local potentials. If the solution is not correct, then a node can make a small local change to improve the global potential. 
+Local potential problems are essentially all problems for which we can do such an argument; that is, there is some global potential that is just the sum over all local potentials. If the solution is not correct, then a node can make a small local change to improve the global potential.
 
 ## New result
 
