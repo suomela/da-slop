@@ -1,0 +1,2074 @@
+% Self-contained source: latexmk -pdf writeup.tex
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=27mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{microtype,enumitem,booktabs,array}
+\usepackage{xcolor,tikz}
+\usepackage{aliascnt}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,
+  urlcolor=blue!55!black,bookmarksnumbered=true]{hyperref}
+\usepackage[capitalise,nameinlink,noabbrev]{cleveref}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\newtheorem{theorem}{Theorem}[section]
+\newaliascnt{lemma}{theorem}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\newaliascnt{proposition}{theorem}
+\newtheorem{proposition}[proposition]{Proposition}
+\aliascntresetthe{proposition}
+\newaliascnt{corollary}{theorem}
+\newtheorem{corollary}[corollary]{Corollary}
+\aliascntresetthe{corollary}
+\newaliascnt{claim}{theorem}
+\newtheorem{claim}[claim]{Claim}
+\aliascntresetthe{claim}
+\theoremstyle{definition}
+\newaliascnt{definition}{theorem}
+\newtheorem{definition}[definition]{Definition}
+\aliascntresetthe{definition}
+\theoremstyle{remark}
+\newaliascnt{remark}{theorem}
+\newtheorem{remark}[remark]{Remark}
+\aliascntresetthe{remark}
+\DeclareMathOperator{\Def}{def}
+\DeclareMathOperator{\supp}{supp}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\R}{\mathbb R}
+\newcommand{\N}{\mathbb N}
+\newcommand{\HH}{\mathcal H}
+\newcommand{\PP}{\mathcal P}
+\newcommand{\budget}{\mathcal R}
+\newcommand{\LOCAL}{\textsf{LOCAL}}
+\newcommand{\ind}{\mathbf 1}
+\newcommand{\avg}[2]{\left\langle #1\right\rangle_{#2}}
+\definecolor{vertexblue}{HTML}{275D84}
+\definecolor{witnessorange}{HTML}{B75E17}
+\definecolor{pairpurple}{HTML}{794581}
+\tikzset{
+  vertex/.style={circle,draw=vertexblue,fill=blue!8,thick,inner sep=2pt,minimum size=6mm},
+  witness/.style={circle,draw=witnessorange,fill=orange!15,thick,inner sep=2pt,minimum size=6mm},
+  edge/.style={thick},
+  newedge/.style={very thick,draw=witnessorange},
+  flowbox/.style={draw=vertexblue,rounded corners=2pt,fill=blue!4,
+    align=center,font=\small,text width=31mm,minimum height=15mm},
+  flowarrow/.style={-{Stealth[length=2mm]},thick,draw=vertexblue}
+}
+\hypersetup{
+  pdftitle={An exact factor-seven approximation for planar domination in constant locality},
+  pdfauthor={AI-generated write-up}
+}
+\title{An exact factor-seven approximation for planar domination\\
+  in constant locality}
+\author{AI-generated write-up}
+\date{23 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We prove that minimum dominating set in finite simple planar graphs admits a
+deterministic constant-round \LOCAL{} algorithm with approximation ratio
+exactly \(7\). The constant is independent of the number of vertices and the
+maximum degree; the algorithm needs neither of these parameters nor a planar
+embedding. Together with the known lower bound excluding every ratio
+\(7-\varepsilon\), this shows that the optimal constant is attained.
+The proof combines a two-threshold reduction of hard common neighborhoods,
+exact maximal packing with bounded constraint size, a selection threshold
+that retains quantitative slack, and a planar face-incidence count.
+The comparison is with the integral domination number. We give the complete
+algorithm and all the combinatorial and numerical arguments needed for its
+guarantee, including a finite construction of its constant-round packing
+routine.
+\end{abstract}
+
+\section{The question and the result}
+\label{sec:introduction}
+
+A set \(D\) of vertices of a graph is \emph{dominating} if every vertex
+belongs to \(D\) or has a neighbor in \(D\). The minimum cardinality of such
+a set is the \emph{domination number} \(\gamma(G)\). We ask how well a
+distributed algorithm can approximate \(\gamma(G)\) when every vertex must
+decide whether to join the output after a constant number of communication
+rounds.
+
+Hilke, Lenzen, and Suomela proved that, for every fixed
+\(\varepsilon>0\), no deterministic constant-round algorithm achieves
+approximation ratio \(7-\varepsilon\) on planar graphs~\cite{HLS14}.
+Recent work of Amiri and Siebertz~\cite{AS26} and
+Picavet~\cite{Picavet26} gives ratio \(7+\varepsilon\) for every fixed
+\(\varepsilon>0\). These bounds identify the infimum of the achievable
+ratios as \(7\), but leave the endpoint question:
+\[
+  \textit{Is there one constant-round algorithm with ratio exactly \(7\)?}
+\]
+The answer is affirmative.
+
+\begin{theorem}\label{thm:main}
+There are a deterministic \LOCAL{} algorithm and an absolute constant \(r\)
+such that, on every finite simple planar graph \(G\), the algorithm terminates
+within \(r\) rounds and outputs a dominating set \(O\) with
+\[
+  |O|\leq 7\gamma(G).
+\]
+The round bound is independent of \(|V(G)|\), the maximum degree, the
+identifier assignment, and the port numbering. The algorithm is not given
+a planar embedding, \(|V(G)|\), or the maximum degree.
+\end{theorem}
+
+The guarantee has no additive error and no minimum-order restriction.
+In particular, disconnected graphs, isolated vertices, and the empty graph
+are included. The constants in the construction are deliberately generous;
+no useful practical running time is claimed.
+
+\subsection{Prior work and the techniques used here}
+
+In the deterministic LOCAL model~\cite{Linial92,Suomela13}, the established
+constant-round approximation ratios for planar minimum dominating set have
+progressed from $130$~\cite{LPW13}, through $52$~\cite{Waw14} and
+$11+\varepsilon$~\cite{HSV22,HKSS25}, to $8+\varepsilon$~\cite{Waw26} and,
+most recently, $7+\varepsilon$~\cite{AS26,Picavet26}. Hilke, Lenzen, and
+Suomela~\cite{HLS14} proved that every ratio $7-\varepsilon$ is impossible in
+constant rounds. Amiri and Siebertz~\cite{AS26} also give a path-power
+lower-bound construction, including a formulation with known network size
+and identifiers drawn from $\{1,\ldots,n\}$. These bounds identify seven as
+the infimum; attaining that infimum requires an additional argument. In
+other local optimization problems, an endpoint approached by all
+$\alpha+\varepsilon$ guarantees can remain unattainable~\cite{FHK11}.
+
+The two recent $7+\varepsilon$ algorithms have different scope and techniques.
+Amiri and Siebertz~\cite{AS26} use clustering, averaging, and LP
+derandomization on proper minor-closed classes; their planar guarantee is
+against the fractional domination optimum $\gamma_f(G)$. Picavet~\cite{Picavet26}
+works under bounds on maximum average degree and on the density of
+depth-one shallow minors, with a guarantee against the integral optimum
+$\gamma(G)$. Maximum average degree means the largest average degree of
+a nonempty subgraph. A depth-one shallow minor is obtained by contracting
+disjoint connected subgraphs of radius at most one and then deleting
+vertices and edges; for a nonempty minor, its density is its number of
+edges divided by its number of vertices. The exact-seven result here also
+compares to $\gamma(G)$.
+It does not establish a factor seven against $\gamma_f(G)$.
+Here $\gamma_f(G)$ is the minimum of $\sum_{v\in V}x_v$ over
+nonnegative real weights satisfying $\sum_{v\in N[w]}x_v\geq1$ for
+every vertex $w$, where $N[w]$ is the vertex $w$ together with its
+neighbors; integral dominating sets are feasible zero--one
+solutions, so $\gamma_f(G)\leq\gamma(G)$.
+
+The present construction starts from Picavet's hard-neighborhood hypergraph
+and sunflower framework~\cite{Picavet26,ER60}, which in turn builds on the
+degree-reduction and LP approach of Heydt and coauthors~\cite{HSV22,HKSS25}.
+We also use the threshold/layer-cake viewpoint in Picavet's rounding
+analysis. The endpoint proof separates two structural thresholds, computes
+an exact maximal fractional packing without a bound on variable frequency,
+and charges missed hard neighborhoods to quantitative rounding slack and
+planar Euler deficits. Every lemma used for these steps is proved here.
+
+Density-based domination rounding predates these local algorithms.
+The arboricity $a$ of a graph is the minimum number of forests whose
+edge sets cover all of its edges.
+Bansal and Umboh~\cite{BU17} give a $3a$ approximation for graphs of
+arboricity at most a positive bound $a$,
+and Dvo\v r\'ak~\cite{Dvorak19} improves the relevant rounding bound to
+$2a+1$. Dory, Ghaffari, and Ilchi~\cite{DGI24} obtain
+$(2a+1)(1+\varepsilon)$ in degree-dependent distributed time. Earlier
+constant-round approaches use local approximate covering-LP solvers of
+Kuhn, Moscibroda, and Wattenhofer~\cite{KMW06,KMW16} after reducing the
+incidence parameters. Our packing lemma instead needs exact maximality,
+not an optimal packing objective. Exact fractional-packing algorithms have
+precedents in \AA strand and Suomela~\cite{AS10}; the bounded-row-arity,
+finite-capacity formulation used here is proved directly.
+
+The endpoint does not follow by substituting \(\varepsilon=0\) in a
+\((7+\varepsilon)\)-approximation: the number of rounds of that family may
+diverge as \(\varepsilon\) tends to zero. The proof below instead fixes all
+parameters once and accounts for the apparent approximation losses using
+nonnegative slack in the same solution.
+
+\subsection{Proof outline}
+
+First, we mark single vertices and pairs whose common neighbors cannot be
+dominated cheaply from outside the marked set. A reduction with two distinct
+thresholds produces a hypergraph \(\HH\) of rank at most two and bounded
+maximum degree. Every original hard set contains a retained hyperedge.
+After removing the common neighbors of retained hyperedges from the
+request set, each vertex has only a bounded number of residual neighbors.
+
+Next, we compute a maximal fractional packing with variables \(y_w\) for
+residual requests and \(z_e\) for retained hyperedges. Its rows have a fixed
+maximum size, even though a variable can occur in arbitrarily many rows.
+We prove that fixed rational capacities and bounded row size allow an
+exact constant-round algorithm for this packing.
+
+Finally, we select vertices whose packing rows are sufficiently close to
+tight, and add the residual vertices still undominated. The planar
+edge bound yields a quantitative rounding inequality. Comparison with
+an arbitrary integral dominating set produces a common nonnegative
+budget. A face count and star contractions show that hyperedges missed by
+the comparison set consume only a small fraction of that budget. The
+remaining slack gives the exact factor \(7\).
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=5mm]
+  \node[flowbox] (hard) {Hard singletons\\and pairs};
+  \node[flowbox,right=of hard] (packing) {Residual requests\\and packing \((y,z)\)};
+  \node[flowbox,right=of packing] (threshold) {Near-tight rows\\select \(S\)};
+  \node[flowbox,right=of threshold] (repair) {Repair uncovered\\requests with \(U\)};
+  \draw[flowarrow] (hard)--(packing);
+  \draw[flowarrow] (packing)--(threshold);
+  \draw[flowarrow] (threshold)--(repair);
+\end{tikzpicture}
+\caption{The algorithm. All four stages use a fixed-radius neighborhood.
+The marked hyperedges help dominate the removed requests; the repair set
+\(U\) handles the residual requests not already dominated by \(S\).}
+\label{fig:pipeline}
+\end{figure}
+
+\section{Model, notation, and elementary planar facts}
+\label{sec:preliminaries}
+
+We use the standard synchronous deterministic \LOCAL{} model
+\cite{Linial92,Suomela13}. Vertices are processors with distinct positive
+integer identifiers.
+An edge permits a message in each direction in each round; messages and
+local computations have no size or time bound. Incident edges may have
+arbitrary local port numbers. The algorithm must be effective: every local
+step is an ordinary terminating computation. Exact operations on rational
+numbers and exhaustive searches over a finite neighborhood are permitted.
+In a constant number of rounds a vertex can gather a fixed-radius
+neighborhood, together with identifiers and the adjacency information
+needed below. The graph is promised to be planar; the algorithm does not
+test this promise.
+
+All graphs are finite, undirected, and simple. Unless specified otherwise,
+adjacency and neighborhoods refer to the input graph \(G=(V,E)\). Write
+\[
+  N(v)=\{w:vw\in E\},\qquad N[v]=N(v)\cup\{v\},\qquad
+  N[A]=\bigcup_{a\in A}N[a].
+\]
+For a nonempty set \(A\subseteq V\), let
+\[
+  X(A)=\bigcap_{a\in A}N(a)
+\]
+be its common \emph{open} neighborhood. A set \(C\) dominates a request
+set \(W\) if \(W\subseteq N[C]\). In particular, \(X(\{v\})=N(v)\).
+For \(W\subseteq V\), put
+\[
+  e_G(W)=|E(G[W])|,
+  \qquad
+  \Def_G(W)=3|W|-e_G(W).
+\]
+We omit the subscript \(G\) when the ambient graph is clear. The
+\emph{coarse deficit} \(\Def(W)\), with \(3|W|\) rather than
+\(3|W|-6\), is convenient for small and disconnected induced subgraphs.
+For a function \(y:V\to\R\), write \(y(W)=\sum_{w\in W}y_w\).
+All sums over empty sets are zero.
+
+\subsection{Planar drawings, edge bounds, and contractions}
+
+A graph is planar if it has a drawing on the sphere in which vertices
+are distinct points and edges are arcs meeting only at shared endpoints.
+The following standard facts about planar drawings are included with
+proofs; see also Diestel~\cite[Chapter~4]{Diestel25} for general background.
+A planar drawing is used only in the analysis, not supplied to the algorithm.
+
+For disjoint $A,B$, let $e_G(A,B)$ count edges with one endpoint in each
+set. The graph consisting of these edges is bipartite, regardless of
+any other edges of $G$.
+
+Fix a drawing of a connected graph with at least one edge. A \emph{dart}
+is an oriented edge $(u,v)$, and its reverse is $(v,u)$. The drawing gives
+a cyclic order of the darts leaving each vertex. Let $\sigma$ take each
+dart to its successor in this order, and put $\alpha(u,v)=(v,u)$.
+The cycles of
+\[
+ \varphi=\sigma\circ\alpha
+\]
+are the facial boundary walks, traversed in one consistent direction.
+Every dart belongs to exactly one such cycle, so the sum of boundary
+lengths is $2e$. These walks may repeat vertices and may traverse both
+orientations of a bridge; they need not be simple cycles.
+
+For a connected drawing with $n$ vertices, $e$ edges, and $f$ faces,
+\begin{equation}\label{geom:Euler}
+ n-e+f=2.
+\end{equation}
+For completeness, an embedded tree has one face: successively deleting
+leaves does not change the number of complementary regions and reduces
+to a single vertex. Since a tree has $n-1$ edges, the formula holds.
+Otherwise, delete an edge on a cycle. The graph stays connected, and the
+two sides of the edge belong to distinct faces, since a simple cycle
+containing it separates the sphere. Deletion merges precisely those two
+faces, reducing both $e$ and $f$ by one. Repeating until a tree remains
+proves \eqref{geom:Euler}.
+
+\begin{lemma}[Planar edge bounds]\label{geom:edge-bounds}
+A connected simple planar graph with $n\geq3$ vertices has at most $3n-6$
+edges. If it is bipartite, it has at most $2n-4$ edges. Consequently every
+finite simple planar graph, with no connectivity or minimum-order
+assumption, satisfies
+\[
+ |E(G)|\leq3|V(G)|,\qquad
+ |E(G)|\leq2|V(G)|\quad\text{if $G$ is bipartite}.
+\]
+In particular, $\Def(W)\geq0$ for every vertex set $W$, and
+$e_G(A,B)\leq2(|A|+|B|)$ for disjoint $A,B$.
+\end{lemma}
+\begin{proof}
+A facial boundary cannot have length one, because that would give a loop.
+A boundary of length two has darts $(u,v),(v,u)$: successive darts form a
+walk, and simplicity permits only this return in two steps. The equalities
+\[
+ \varphi(u,v)=(v,u),\qquad \varphi(v,u)=(u,v)
+\]
+say that the cyclic successor fixes $(v,u)$ at $v$ and $(u,v)$ at $u$.
+A cyclic permutation fixes a member only if its fiber has size one.
+Hence both endpoints have degree one, so their connected component is
+$K_2$. Every facial boundary in a connected graph of order at least three
+therefore has length at least three. Thus $3f\leq2e$, which together with
+\eqref{geom:Euler} gives $e\leq3n-6$.
+
+In a bipartite graph every closed walk has even length, since each step
+changes sides. For a connected component of order at least three, the
+preceding argument excludes length two, so every face has length at least
+four. The inequality $4f\leq2e$ and \eqref{geom:Euler} give $e\leq2n-4$.
+
+Components of order one and two have respectively zero and at most one
+edge. They satisfy both relaxed bounds. Apply the connected bounds to
+all other components and sum; the empty graph also satisfies the claims.
+Induced subgraphs, and the bipartite subgraph between $A$ and $B$, inherit
+planarity by deleting vertices and edges. This proves the final claims.
+\end{proof}
+
+\begin{lemma}[Outside domination of a common neighborhood]
+\label{geom:outside-pair}
+For three distinct vertices $a,b,d$ of a simple planar graph,
+\[
+ |N(a)\cap N(b)\cap N[d]|\leq3.
+\]
+\end{lemma}
+\begin{proof}
+The graph $K_{3,3}$ is not planar: it is connected and bipartite, with
+six vertices and nine edges, whereas Lemma~\ref{geom:edge-bounds} allows
+at most eight. If the displayed intersection had at least four members,
+choose three distinct members $w_1,w_2,w_3$ different from $d$. Each is
+adjacent to $a,b,d$. None equals $a$ or $b$, by absence of loops, and none
+equals $d$ by choice. The two triples therefore form a $K_{3,3}$ subgraph.
+Deleting all other vertices and edges would preserve its planar drawing,
+a contradiction.
+\end{proof}
+
+\begin{lemma}[Simultaneous contraction of domination stars]
+\label{geom:star-contraction}
+Let $D$ dominate a planar graph $G$, and fix a map $f:V(G)\to D$ with
+\[
+ f(v)\in N[v]\quad(v\in V(G)),\qquad f(d)=d\quad(d\in D).
+\]
+For any $L\subseteq V(G)\setminus D$, put
+\[
+ q(v)=
+ \begin{cases} f(v),&v\in L,\\ v,&v\notin L.\end{cases}
+\]
+The simple graph $F$ on $V(G)\setminus L$ with edge set
+\[
+ \bigl\{\{q(u),q(v)\}:uv\in E(G),\ q(u)\ne q(v)\bigr\}
+\]
+is planar. All vertices outside $L$ remain distinct. If $W\cap L$ is
+empty, every edge of $G[W]$ remains in $F[W]$.
+\end{lemma}
+\begin{proof}
+Such an assignment exists by fixing $D$ pointwise and choosing a dominating
+neighbor in $D$ for every other vertex. If $v\in L$, then $v\ne f(v)$ and
+the edge $vf(v)$ exists. These edges form vertex-disjoint stars centered
+in $D$: every leaf has one assigned center, and no center is a leaf.
+
+Contract all these star edges, retaining each center's name. Edge
+contraction preserves a planar drawing. Indeed, choose a narrow disk
+around an edge and its endpoints, containing no other vertex. The
+incident arcs can be redrawn inside this disk to meet one vertex in their
+existing boundary order, without crossings. Carry this out one edge at
+a time. Delete resulting loops, and keep one copy of each group of
+parallel edges. Neither deletion introduces a crossing. No two centers,
+and no two vertices outside $L$, are identified. The resulting vertex
+map is exactly $q$, and its simple edge set is the one stated.
+For $u,v\in W$ the map fixes both distinct endpoints, so each edge $uv$
+survives.
+\end{proof}
+
+\begin{lemma}[Realizing assigned incidences]\label{geom:assigned-incidences}
+Keep $D,f$ as above. Let $A\subseteq V(G)\setminus D$, $B\subseteq D$,
+and $P\subseteq A\times B$ be a set of distinct ordered pairs. Suppose
+each $(a,d)\in P$ has a witness $w_{a,d}$ with
+\[
+ aw_{a,d}\in E(G),\qquad f(w_{a,d})=d,\qquad w_{a,d}\notin A.
+\]
+Then
+\begin{equation}\label{geom:assigned-bipartite}
+ |P|\leq2(|A|+|B|).
+\end{equation}
+If also $A\cup B\subseteq W$, all witnesses lie outside $W$, and
+$ad\notin E(G)$ for every $(a,d)\in P$, then
+\begin{equation}\label{geom:assigned-new}
+ |P|\leq\Def(W).
+\end{equation}
+\end{lemma}
+\begin{proof}
+Let $L$ consist of the chosen witnesses outside $D$, and apply
+Lemma~\ref{geom:star-contraction}. No vertex of $A\cup B$ is contracted.
+Every witness maps to its assigned vertex $d$. This includes a witness
+already in $D$: it is then equal to $f(w)=d$ and is left fixed.
+The edge $aw_{a,d}$ consequently becomes $ad$, with distinct endpoints
+because $A\cap D$ is empty.
+
+Different ordered pairs in $P$ give different unordered edges: disjointness
+of $A,B$ determines the orientation from $A$ to $B$. Restricting to those
+edges gives a simple planar bipartite graph on $A\cup B$. Its edge bound
+proves \eqref{geom:assigned-bipartite}.
+
+Under the additional assumptions, the contractions fix $W$, so $F[W]$
+contains every original edge of $G[W]$. The $|P|$ edges obtained above are
+all distinct and were absent from $G[W]$. Hence
+\[
+ e_G(W)+|P|\leq |E(F[W])|\leq3|W|,
+\]
+proving \eqref{geom:assigned-new}.
+\end{proof}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.05]
+ \coordinate (a) at (0,1);
+ \coordinate (b) at (0,-1);
+ \coordinate (d) at (2.4,0);
+ \coordinate (w1) at (1.15,0.85);
+ \coordinate (w2) at (1.15,-0.85);
+ \draw[edge] (a)--(b) (a)--(w1) (b)--(w2);
+ \draw[newedge] (w1)--(d) (w2)--(d);
+ \node[vertex] at (a) {\(a\)};
+ \node[vertex] at (b) {\(b\)};
+ \node[vertex] at (d) {\(d\)};
+ \node[witness] at (w1) {\(w_1\)};
+ \node[witness] at (w2) {\(w_2\)};
+ \node[font=\small,align=center] at (1.2,-1.65)
+   {Before: \(f(w_1)=f(w_2)=d\)};
+ \draw[flowarrow] (3.1,0)--(4.4,0)
+   node[midway,above,font=\small] {contract};
+ \coordinate (aa) at (5.1,1);
+ \coordinate (bb) at (5.1,-1);
+ \coordinate (dd) at (7.5,0);
+ \draw[edge] (aa)--(bb);
+ \draw[newedge] (aa)--(dd) (bb)--(dd);
+ \node[vertex] at (aa) {\(a\)};
+ \node[vertex] at (bb) {\(b\)};
+ \node[vertex] at (dd) {\(d\)};
+ \node[font=\small,align=center] at (6.3,-1.65)
+   {After: old edge \(ab\) is retained};
+\end{tikzpicture}
+\caption{Contraction of a domination star. Blue vertices are retained,
+and the orange witness vertices are contracted to their assigned
+dominator \(d\). If the blue vertices lie in a protected set \(W\)
+and the witnesses lie outside it, every original edge of \(G[W]\)
+survives. Distinct new edges inside \(W\) can then be charged to
+\(\Def(W)=3|W|-e_G(W)\). The picture illustrates the operation, without
+assuming that this small example itself has a hard neighborhood.}
+\label{fig:contraction}
+\end{figure}
+
+\begin{lemma}[Pair counts from endpoint degrees]\label{geom:pair-degree}
+Let $\mathcal P$ be a simple graph of pairs of maximum degree at most
+$T$. For any vertex set $Z$, at most $T|Z|/2$ of its edges have both
+endpoints in $Z$. If all its endpoints lie in $A\subseteq V(G)$, put
+\[
+ c(w)=|\{\{a,b\}\in E(\mathcal P):a,b\in N_G(w)\}|.
+\]
+For planar $G$,
+\begin{align}
+ \sum_{w\in A}c(w)&\leq3T|A|,\label{geom:pairs-inside}\\
+ \sum_{w\in B}c(w)&\leq T(|A|+|B|)
+       \quad\text{if }A\cap B=\varnothing.\label{geom:pairs-bipartite}
+\end{align}
+The edges of $\mathcal P$ need not be edges of $G$.
+\end{lemma}
+\begin{proof}
+The sum of degrees in $\mathcal P[Z]$ counts every internal pair twice
+and is at most $T|Z|$. Apply this to $Z=N_G(w)\cap A$. For $w\in A$,
+summing gives
+\[
+ \sum_{w\in A}c(w)
+ \leq\frac T2\sum_{w\in A}|N_G(w)\cap A|
+ =T e_G(A)\leq3T|A|.
+\]
+For disjoint $A,B$, it gives
+\[
+ \sum_{w\in B}c(w)
+ \leq\frac T2 e_G(A,B)\leq T(|A|+|B|).
+\]
+Both last inequalities use Lemma~\ref{geom:edge-bounds}.
+\end{proof}
+
+\section{Exact maximal packing with bounded row size}
+\label{sec:packing}
+
+Maximal fractional packings are a standard tool for local covering
+algorithms; see, for example, \AA strand and Suomela~\cite{AS10}.
+We need an exact packing result whose round bound depends on constraint
+size and on a fixed finite set of capacities, but not on the number of
+constraints containing a variable.  We prove that result here.
+
+Let $I$ be a finite set of variables and $\mathcal A$ a finite set of row
+indices.  A row $r\in\mathcal A$ has a support $E_r\subseteq I$ and a
+capacity $c_r>0$.  Different rows may have the same support and capacity.
+There are no repeated occurrences of a variable within a row.  Given a
+common cap $M>0$, a vector $x\in\mathbb R^I$ is \emph{feasible} if
+\begin{equation}\label{pack:feasible}
+ 0\leq x_i\leq M\quad(i\in I),
+ \qquad \sum_{i\in E_r}x_i\leq c_r\quad(r\in\mathcal A).
+\end{equation}
+It is \emph{coordinatewise maximal} if there is no other feasible vector
+$x'$ with $x'_i\geq x_i$ for every $i$ and a strict inequality for at least
+one $i$.  In the incidence network there is one node for each variable and
+one node for each row, with an edge $ir$ exactly when $i\in E_r$.
+Each row node knows its capacity.  Empty rows are harmless and may be
+discarded.  We allow isolated variable nodes.
+
+\begin{lemma}[Exact bounded-arity packing]\label{pack:theorem}
+Fix an integer $K\geq0$, a finite set $C\subseteq\mathbb Q_{>0}$, and
+$M\in\mathbb Q_{>0}$.  There is an effectively constructible finite set
+\[
+ \mathcal P(K,C,M)\subseteq[0,M]\cap\mathbb Q,
+ \qquad 0,M\in\mathcal P(K,C,M),
+\]
+with the following property.  On every finite incidence network satisfying
+$|E_r|\leq K$ and $c_r\in C$, a deterministic algorithm computes a
+coordinatewise maximal feasible vector using at most
+\[
+ 2\bigl(|\mathcal P(K,C,M)|-1\bigr)
+\]
+communication rounds.  Every output coordinate
+belongs to $\mathcal P(K,C,M)$.  The algorithm needs neither the size of
+the instance nor a bound on the number of rows containing a variable.
+It uses exact rational arithmetic and does not require identifiers or
+symmetry breaking on the incidence network.
+\end{lemma}
+
+\subsection{A certificate and a finite progressive-filling process}
+
+We call a feasible vector $x$ a \emph{water-filling certificate} if, for
+each $i\in I$, either $x_i=M$, or there is a row $r$ such that
+\begin{equation}\label{pack:certificate}
+ i\in E_r,\qquad
+ \sum_{j\in E_r}x_j=c_r,\qquad
+ x_j\leq x_i\quad\hbox{for every }j\in E_r.
+\end{equation}
+Thus a noncapped coordinate has a tight row whose other coordinates are
+no larger.  This last condition is the additional information used in the
+palette argument.
+
+\begin{lemma}\label{pack:existence}
+Every finite system with positive rational capacities and positive
+rational common cap has a rational water-filling certificate.
+Every water-filling certificate is coordinatewise maximal.
+\end{lemma}
+\begin{proof}
+Here is a finite, global process used to prove existence.  Its global
+minimum operations will not be part of the distributed algorithm.
+Initially all coordinates are active, their values are zero, and the
+current level is $a=0$.  Active coordinates always have the common value
+$a$; every already frozen coordinate has its final value, at most $a$.
+
+Suppose the active set $A$ is nonempty.  For each row put
+\[
+ m_r=|E_r\cap A|,
+ \qquad F_r=\sum_{i\in E_r\setminus A}x_i.
+\]
+For rows with $m_r>0$ define
+$b_r=(c_r-F_r)/m_r$, and let
+\begin{equation}\label{pack:next-event}
+ b=\min\bigl(\{M\}\cup\{b_r:r\in\mathcal A,\ m_r>0\}\bigr).
+\end{equation}
+The set in this minimum is finite and nonempty, and all its entries are
+rational.  Current feasibility gives $b_r\geq a$ for every such row,
+and hence $a\leq b\leq M$.  Raise every active coordinate to $b$ and
+leave frozen coordinates unchanged.  A row with $m_r>0$ now has load
+$F_r+m_rb\leq c_r$; a row with $m_r=0$ has not changed.  Thus the new
+vector is feasible.
+
+Freeze every active coordinate lying in any row that is now tight;
+also freeze all active coordinates if $b=M$.  All simultaneous tight
+rows are processed in this step.  At least one active coordinate freezes:
+either $M$ attains the minimum and all of them freeze, or some row with
+$m_r>0$ attains the minimum and all of its active coordinates freeze.
+For a coordinate frozen by a tight row, all coordinates of that row are
+now frozen, and their values are at most $b$.  Consequently that row
+stays tight forever and supplies~\eqref{pack:certificate} for the
+coordinate just frozen.  Previously supplied certificates are preserved.
+The level is now $b$, and the process repeats on the remaining active set.
+
+This proves termination after at most $|I|$ steps.  More explicitly, when
+any active coordinates remain, no tight row contains an active
+coordinate, since the preceding step froze all such coordinates.  Also
+the current level is below $M$.  Hence the next level in
+\eqref{pack:next-event} is strictly larger than the current level.
+The initial positivity assumptions give the same conclusion for the
+first step.  Every operation uses rational arithmetic, so the final
+vector is rational.  If $I$ is empty there is no step and the conclusion
+is vacuous.  An isolated variable is eventually frozen at $M$.
+The final vector has the asserted certificate.
+
+Finally, let $x$ be any vector satisfying the certificate, and suppose
+$x'\geq x$ is feasible.  If $x'_i>x_i$, then $x_i\ne M$.  A tight row
+witnessing~\eqref{pack:certificate} for $i$ has strictly larger load at
+$x'$ than at $x$, contradicting feasibility.  Thus no coordinate can
+increase, as required.
+\end{proof}
+
+\subsection{An explicit finite palette}
+
+We now define $\mathcal P(K,C,M)$ recursively.  This is a finite
+computation on rational numbers; it does not examine the incidence
+network.  For $K=0$, or for $C=\varnothing$, set
+\begin{equation}\label{pack:base-palette}
+ \mathcal P(K,C,M)=\{0,M\}.
+\end{equation}
+For $K\geq1$ and $C\ne\varnothing$, form the primary set
+\begin{equation}\label{pack:primary}
+ B=\{0,M\}\cup
+ \left\{\frac{c}{h}:c\in C,\ 1\leq h\leq K,
+                    \ 0<\frac{c}{h}<M\right\}.
+\end{equation}
+Write its distinct elements in increasing order as
+$0=b_0<b_1<\cdots<b_s=M$.  Initialize $F=\{0\}$.
+Process the consecutive intervals $(a,b)=(b_j,b_{j+1})$ from left to
+right.  At the beginning of an interval define the finite set
+\begin{equation}\label{pack:residual-capacities}
+ C_{a,F}=\mathbb Q_{>0}\cap\left\{
+ c-\sum_{\nu=1}^{d}p_\nu-ma:
+ \begin{array}{l}
+ c\in C,\quad d,m\geq1,\quad d+m\leq K,\\
+ p_1,\ldots,p_d\in F
+ \end{array}\right\}.
+\end{equation}
+The notation in this display means that only positive values of the
+displayed expression are retained.  Repetition among the $p_\nu$ is
+allowed.  Compute
+\[
+ P'=\mathcal P(K-1,C_{a,F},b-a)
+\]
+and replace $F$ by
+\begin{equation}\label{pack:palette-update}
+ F\ \longleftarrow\ F\cup\{a+t:t\in P'\}\cup\{b\}.
+\end{equation}
+After the last interval, return $F$ as $\mathcal P(K,C,M)$.
+
+There are finitely many primary intervals and finitely many choices in
+\eqref{pack:residual-capacities}.  Every recursive call decreases $K$;
+its new common cap $b-a$ is positive and its capacity set is finite and
+positive.  The procedure therefore terminates.  All comparisons,
+sorting, and arithmetic are exact operations on rational numbers, so
+the palette is effectively constructible.  By induction, the recursive
+palette $P'$ lies in $[0,b-a]$, and its translate lies in $[a,b]$.
+At the start of an interval, $F\subseteq[0,a]$; after the update,
+$F\subseteq[0,b]$.  It follows in particular that
+$\mathcal P(K,C,M)\subseteq[0,M]\cap\mathbb Q$, and that the final
+palette contains both $0$ and $M$.  These facts also cover an empty
+residual capacity set.  No quantity in this construction depends on
+$|I|$, $|\mathcal A|$, or variable frequency.
+
+\begin{lemma}[Palette coverage]\label{pack:coverage}
+If $|E_r|\leq K$, $c_r\in C$, and $x$ is a water-filling certificate
+with common cap $M$, then
+\[
+ x_i\in\mathcal P(K,C,M)\quad\hbox{for every }i\in I.
+\]
+\end{lemma}
+\begin{proof}
+We prove the assertion by induction on $K$, for every choice of finite
+positive rational $C$ and positive rational $M$, and every finite system.
+If $K=0$, no row can contain a variable.  If $C=\varnothing$, there are
+no rows at all.  In either case the certificate forces $x_i=M$ for every
+$i$, proving the assertion for the base cases.
+
+Assume $K\geq1$, $C\ne\varnothing$, and the assertion for $K-1$.
+In the primary-interval sweep maintain the invariant
+\begin{equation}\label{pack:sweep-invariant}
+ x_i\leq a\quad\Longrightarrow\quad x_i\in F.
+\end{equation}
+It holds initially at $a=0$, since feasibility makes every such value
+zero.  Consider one consecutive primary interval $(a,b)$.  By the
+definition of the primary set, for every $c\in C$ and every
+$1\leq h\leq K$ we have
+\begin{equation}\label{pack:gap}
+ \frac{c}{h}\leq a\quad\hbox{or}\quad\frac{c}{h}\geq b.
+\end{equation}
+Indeed, a ratio strictly between $a$ and $b$ would be an omitted primary
+point.  Ratios at the boundaries are allowed in this statement; ratios
+at least $M$ satisfy the second alternative.
+
+Let $I_a=\{i\in I:x_i>a\}$.  For each row split its support into
+\[
+ O_r=\{i\in E_r:x_i\leq a\},
+ \qquad L_r=\{i\in E_r:x_i>a\}.
+\]
+Keep only rows for which $O_r$ and $L_r$ are both nonempty.  For every
+kept row define a residual row on $I_a$ with support $L_r$ and capacity
+\begin{equation}\label{pack:residual-row}
+ c'_r=c_r-\sum_{i\in O_r}x_i-|L_r|a.
+\end{equation}
+Its arity is at most $K-1$, because at least one old coordinate was
+deleted.  Its capacity is positive: feasibility and $L_r\ne\varnothing$
+give
+\[
+ c'_r\ \geq\ \sum_{i\in L_r}(x_i-a)\ >\ 0.
+\]
+By the sweep invariant every old value belongs to $F$.  Taking
+$d=|O_r|$, $m=|L_r|$ in~\eqref{pack:residual-capacities} therefore
+shows that $c'_r\in C_{a,F}$.  In particular the residual capacities
+are rational, even if we initially allowed a real-valued certificate.
+
+Give this residual system the common cap $b-a$, and set
+\begin{equation}\label{pack:residual-vector}
+ z_i=\min\{x_i,b\}-a\quad(i\in I_a).
+\end{equation}
+We claim that $z$ is a water-filling certificate for the residual
+system.  First, $0<z_i\leq b-a$, and each retained row satisfies
+\begin{align*}
+ \sum_{i\in L_r}z_i
+ &=\sum_{i\in L_r}\min\{x_i,b\}-|L_r|a\\
+ &\leq c_r-\sum_{i\in O_r}x_i-|L_r|a
+ =c'_r.
+\end{align*}
+Thus $z$ is feasible.
+
+If $x_i\geq b$, then $z_i=b-a$, so the common-cap alternative of
+the certificate holds.  It remains to consider $a<x_i<b$.  Since
+$b\leq M$, this coordinate is not capped in the original system.
+Choose a witness row $r$ from~\eqref{pack:certificate}, and put
+$h=|E_r|$.  It contains $i$, so $1\leq h\leq K$, and
+\[
+ \frac{c_r}{h}
+ =\frac{1}{h}\sum_{j\in E_r}x_j
+ \leq x_i<b.
+\]
+Equation~\eqref{pack:gap} gives $c_r/h\leq a$.
+If $O_r$ were empty, all $h$ coordinates of this row would be strictly
+greater than $a$, and its tightness would yield
+$c_r>ha\geq c_r$, a contradiction.  Hence $O_r\ne\varnothing$;
+also $i\in L_r$, so this row was retained.
+Every original coordinate in the witness row is at most $x_i<b$.
+No one of them is altered by truncation at $b$, and therefore
+\[
+ \sum_{j\in L_r}z_j
+ =\sum_{j\in L_r}x_j-|L_r|a=c'_r.
+\]
+Furthermore, $z_j=x_j-a\leq x_i-a=z_i$ for every $j\in L_r$.
+This is precisely the required residual certificate.
+
+The induction hypothesis now applies to the entire residual system,
+including the case of no residual rows or no residual variables.  Thus
+$z_i\in\mathcal P(K-1,C_{a,F},b-a)$ for each $i\in I_a$.
+If $a<x_i<b$, then $x_i=a+z_i$ and the update
+\eqref{pack:palette-update} lists $x_i$.  Values $x_i\leq a$ remain in
+$F$, and the boundary value $x_i=b$ is added explicitly.  We have proved
+the sweep invariant with $b$ in place of $a$.  After the final interval
+we have $b=M$, and feasibility gives $x_i\leq M$ for every coordinate.
+This completes the induction.
+\end{proof}
+
+Two features of the interval argument are useful to make explicit.
+A row all of whose coordinates have value at most $a$ has no residual
+variable and cannot supply a new interior event.  A row with no such
+coordinate cannot witness an event in $(a,b)$: the average-capacity
+argument in the proof forces every witness row for such an event to
+contain an old coordinate.  Thus only rows with both types are needed
+in the residual system.  Also, the artificial cap $b-a$ only truncates
+coordinates whose original final values are at least $b$.  It does not
+assert that those original coordinates freeze at $b$.  A value equal to
+$b$ is covered separately, and later intervals handle values above $b$.
+These observations apply equally at the first interval, at the last
+interval, and when some primary points coincide before duplicates are
+removed.
+
+\subsection{The fixed scan and its locality}
+
+Sort the complete palette as
+\[
+ \mathcal P(K,C,M)=\{0=t_0<t_1<\cdots<t_L=M\}.
+\]
+The incidence-network algorithm begins with value zero at every variable
+and with all variables unfrozen.  For each $h=1,\ldots,L$, it performs
+the following two communication phases.
+\begin{enumerate}
+\item Every unfrozen variable changes its value to $t_h$; a frozen
+variable keeps its current value.  Every variable sends its value to
+each incident row.
+\item Every row computes its exact load and reports to every incident
+variable whether the row is tight.  A variable freezes if it receives
+a tight report or if $t_h=M$.
+\end{enumerate}
+Variables already frozen remain frozen.  A variable with no incident
+row receives no report and freezes at the common cap.  The scan uses a
+fixed finite schedule independent of the instance; it does not wait for
+a globally detected next event.
+
+\begin{proof}[Proof of Lemma~\ref{pack:theorem}]
+Let $x^*$ be a certificate supplied by Lemma~\ref{pack:existence}.
+Every coordinate of $x^*$ is positive: if $x^*_i=0$, then it is below
+$M$, and a witness row would have all its nonnegative coordinates at
+most zero, contradicting its positive capacity.
+Lemma~\ref{pack:coverage} gives $x^*_i\in\mathcal P(K,C,M)$.
+We prove by induction on the scan levels that after level $t_h$ the
+current value at $i$ is
+\begin{equation}\label{pack:scan-invariant}
+ \min\{x^*_i,t_h\},
+ \qquad\hbox{and $i$ is frozen exactly when }x^*_i\leq t_h.
+\end{equation}
+At $t_0=0$ this follows from positivity and initialization.
+Suppose it holds after level $a=t_{h-1}$ and write $t=t_h$.
+There is no coordinate value of $x^*$ strictly between $a$ and $t$,
+because both are consecutive points of a palette containing all such
+values.  A coordinate frozen at the previous level has its final value
+$x^*_i\leq a$.  An unfrozen coordinate has $x^*_i>a$, hence
+$x^*_i\geq t$, and is raised to $t$.  Thus after the first phase
+the current vector is exactly $\min\{x^*,t\}$ coordinate by coordinate.
+This vector is feasible, since it is nonnegative and coordinatewise no
+larger than the feasible vector $x^*$.
+
+If $x^*_i>t$, then $t<M$.  In every row containing $i$, the current
+load is strictly smaller than the final load: this coordinate has been
+strictly decreased, and no other coordinate has increased.  The final
+load is at most capacity, so no incident row is tight now.  Thus $i$
+does not freeze prematurely.
+If $x^*_i=t$, then $i$ freezes at the common cap when $t=M$.
+Otherwise, its witness row in~\eqref{pack:certificate} has every final
+coordinate at most $t$.  The current values on that row already equal
+their final values, and the row is tight, so $i$ freezes in this step.
+Earlier-frozen coordinates stay frozen.  This proves the full invariant.
+
+At the last level $M$, the output is exactly $x^*$.  It is rational,
+feasible, and coordinatewise maximal by Lemma~\ref{pack:existence}.
+The number of phases is $2L=2(|\mathcal P|-1)$.  Each incidence edge
+carries one message in each direction per level.  A variable may have
+arbitrarily many incident rows, but all its messages are sent
+simultaneously.  The LOCAL model permits an arbitrarily large finite
+message on every edge and unbounded local computation, so this does not
+alter the round count.  No identifiers, orientation, or ordering of
+incident edges enter the algorithm.  This proves the lemma.
+\end{proof}
+
+\subsection{Effective arithmetic}
+
+The construction above gives a finite algorithm, rather than only the
+existence of a suitable finite set of numbers.  The recursion for the
+palette terminates by decreasing the nonnegative integer $K$, and its
+inner loops enumerate finite sets and tuples of rational numbers.  It
+can therefore be executed as a preliminary computation depending only
+on the fixed parameters, or its finite output can be included in the
+program.  Neither alternative requires information about the network.
+
+To implement all scan operations using integers, take any positive
+integer $D$ divisible by the denominators of every member of
+$\mathcal P(K,C,M)\cup C\cup\{M\}$.  Such a $D$ is obtained, for
+example, by multiplying the positive denominators in reduced fraction
+representations.  Multiply every value, capacity, and scan level by
+$D$.  Every variable then stores a nonnegative integer.  Row loads are
+finite sums of integers, and tightness is an integer equality.  This
+also shows that exact comparisons cause no issue of real-number
+computation.  The size of the palette and of $D$ may be enormous; only
+their finiteness and independence from the network are required.
+
+\begin{remark}
+The constant in \cref{pack:theorem} depends on row size and on a fixed
+finite set of rational capacities; it need not be efficient in these
+parameters. This is consistent with the \(\Omega(\Delta)\) locality
+barrier for maximal fractional matching when the running time is
+independent of the network size~\cite{GHS17}: its constraints
+are indexed by vertices, its variables by edges, and its row size can
+be the maximum degree \(\Delta\). The lemma makes no half-integrality
+claim. Fine rational denominators can be necessary in local maximal
+fractional matching~\cite{Dahal24}.
+\end{remark}
+
+
+\section{The hard-neighborhood reduction and the algorithm}
+\label{sec:algorithm}
+
+Fix the following constants for the rest of the paper:
+\begin{equation}\label{eq:constants}
+  \theta=\frac17,\qquad T=10^6,\qquad Q=10^{12}.
+\end{equation}
+In particular, \(1\leq T\leq Q\).
+
+\subsection{Hard sets and the retained hypergraph}
+
+A hypergraph here is simply a family of nonempty vertex sets, called
+hyperedges. Its rank is the maximum hyperedge size, and a vertex's
+hypergraph degree is the number of hyperedges containing it.
+
+
+\begin{definition}
+A nonempty set \(A\subseteq V\) is \emph{\(q\)-hard} if no set
+\(C\subseteq V\setminus A\) with \(|C|\leq q\) dominates \(X(A)\).
+\end{definition}
+
+Let \(\HH_0\) consist of the \(Q\)-hard singletons and the \(Q\)-hard
+two-element sets. For each vertex \(v\), put
+\[
+  P(v)=\{u\ne v:\{v,u\}\in\HH_0\}.
+\]
+Define the singleton centers and the retained hypergraph by
+\begin{align}
+  C_*&=\{v:\{v\}\in\HH_0\text{ or }|P(v)|>T\},\label{eq:centers}\\
+  \HH&=\{\{v\}:v\in C_*\}
+   \ \cup\
+   \{e\in\HH_0:|e|=2,\ e\cap C_*=\varnothing\}.\label{eq:hypergraph}
+\end{align}
+Thus we add a singleton at every vertex incident with more than \(T\)
+original hard pairs, and remove every pair that contains a singleton
+center. The pairs sharing a center have disjoint one-vertex remainders,
+the rank-two instance of a sunflower~\cite{ER60}. Its elementary
+reduction properties are proved next.
+
+Set
+\begin{equation}\label{eq:residual}
+  X=\bigcup_{e\in\HH}X(e),\qquad R=V\setminus X.
+\end{equation}
+The vertices of \(R\) are the \emph{residual requests}.
+
+\begin{lemma}\label{lem:hard-properties}
+The construction satisfies the following assertions.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+  \item Every retained hyperedge has one or two vertices, every hard set
+  has a nonempty common neighborhood, and the endpoints of every retained
+  pair are at distance at most two.
+  \item Every edge of \(\HH_0\) contains an edge of \(\HH\).
+  Every retained singleton is \(T\)-hard, and every retained pair is
+  \(Q\)-hard.
+  \item Every vertex belongs to at most \(T\) hyperedges of \(\HH\).
+  \item If \(1\leq |A|\leq2\) and \(X(A)\cap R\ne\varnothing\),
+  then \(A\) is not \(Q\)-hard.
+  \item For every \(v\in V\),
+  \[
+    |N(v)\cap R|\leq B_0,\qquad B_0:=Q(3Q+2).
+  \]
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+If \(X(A)=\varnothing\), the empty set dominates it, so \(A\) is not
+hard. This proves the nonemptiness assertion and the distance bound for
+pairs. A pair of \(\HH_0\) is either retained or contains a center of
+\(C_*\); an original singleton is retained. Hence every original edge
+contains a retained edge.
+
+An original hard singleton is \(T\)-hard because \(T\leq Q\).
+Suppose that \(v\) is a new center with \(|P(v)|>T\), and that
+\(C\subseteq V\setminus\{v\}\), \(|C|\leq T\), dominates \(N(v)\).
+For every \(u\in P(v)\), the set \(C\) dominates
+\(X(\{v,u\})\subseteq N(v)\). If \(u\notin C\), this is a cover of that
+common neighborhood from outside \(\{v,u\}\), contradicting its
+\(Q\)-hardness. Thus \(P(v)\subseteq C\), which is impossible.
+Retained pairs are original hard pairs.
+
+A center belongs only to its own singleton in \(\HH\). A noncenter
+belongs only to original pairs, of which it has at most \(T\).
+For (iv), if \(A\) were \(Q\)-hard, it would contain a retained
+hyperedge \(e\), and
+\(X(A)\subseteq X(e)\subseteq X\), contrary to
+\(X(A)\cap R\ne\varnothing\).
+
+For (v), write \(m=|N(v)\cap R|\), and suppose \(m>Q(3Q+2)\).
+By (iv) applied to \(\{v\}\), some set
+\(C\subseteq V\setminus\{v\}\), \(|C|\leq Q\), dominates \(N(v)\).
+For \(a\in C\), at most one vertex of \(N(v)\cap R\) is dominated by
+equality with \(a\); all other vertices covered by \(a\) are in
+\(N(v)\cap N(a)\cap R\). If these intersections all had at most \(3Q\)
+vertices, their total cover would have size at most
+\[
+  |C|(3Q+1)\leq Q(3Q+1)<m.
+ \]
+Consequently some \(a\in C\) satisfies
+\(|N(v)\cap N(a)\cap R|>3Q\). In particular \(a\ne v\), and
+(iv) applied to \(\{v,a\}\) gives an outside cover of \(X(\{v,a\})\)
+of size at most \(Q\). By the planar three-neighbor bound
+(\cref{geom:outside-pair}), one vertex outside this pair dominates at most
+three of its common neighbors. Such a cover cannot dominate more than
+\(3Q\) common neighbors, a contradiction.
+\end{proof}
+
+\subsection{The mixed packing and the output}
+
+For each \(w\in R\) introduce a variable \(y_w\), and for each
+\(e\in\HH\) a variable \(z_e\). Compute a coordinatewise maximal feasible
+vector for the following packing constraints:
+\begin{align}
+  \ell_v
+  :=\sum_{w\in R\cap N[v]}y_w+
+     \sum_{\substack{e\in\HH\\v\in e}}z_e
+  &\leq 1 &&(v\in V),\label{eq:packing}\\
+  0\leq y_w&\leq\theta &&(w\in R),\nonumber\\
+  0\leq z_e&\leq1 &&(e\in\HH).\nonumber
+\end{align}
+The upper bounds \(z_e\leq1\) are redundant, because every hyperedge is
+nonempty and occurs in the unit row of each endpoint. We state them
+explicitly to use a common coordinate cap \(M=1\). The bounds
+\(y_w\leq\theta\) are singleton rows of capacity \(\theta\).
+By \cref{lem:hard-properties}, every unit row has at most
+\[
+  K:=B_0+1+T=Q(3Q+2)+1+T
+\]
+variables. All row capacities belong to \(\{1,1/7\}\).
+Thus \cref{pack:theorem} supplies an exact maximal packing, with rational
+coordinates, using a fixed finite list of levels.
+Extend \(y\) by setting \(y_v=0\) for \(v\notin R\).
+
+Define
+\begin{equation}\label{eq:output}
+  S=\left\{v:\ell_v\geq
+     1-\frac{\theta-y_v}{2}\right\},
+  \qquad
+  U=R\setminus N[S],
+  \qquad
+  O=S\cup U.
+\end{equation}
+The threshold depends on \(y_v\). Selecting only the exactly tight rows
+would lose a slack term that will be needed later.
+
+\begin{lemma}\label{lem:output-basic}
+The set \(O\) is dominating. Moreover, \(S\cap U=\varnothing\),
+every \(e\in\HH\) meets \(S\), and
+\begin{equation}\label{eq:ucap}
+  y_w=\theta\quad\text{for every }w\in U.
+\end{equation}
+\end{lemma}
+\begin{proof}
+A tight unit row belongs to \(S\), since \(y_v\leq\theta\).
+Consider a hyperedge \(e\). If \(z_e=1\), every endpoint has a tight
+unit row. If \(z_e<1\) and no endpoint row is tight, then all rows
+containing \(z_e\) have positive slack. There are finitely many such
+rows, so \(z_e\) could be increased by some positive amount, contrary
+to coordinatewise maximality. Thus \(e\cap S\ne\varnothing\).
+
+Now let \(w\in U\). None of the unit rows containing \(y_w\) is tight:
+such a row is indexed by a vertex of \(N[w]\), which would belong to
+\(S\) and dominate \(w\). If \(y_w<\theta\), its personal cap and all
+its incident rows therefore have positive slack, again allowing a
+positive increase. This proves \eqref{eq:ucap}.
+
+The definition of \(U\) gives \(S\cap U=\varnothing\) and ensures that
+\(O\) dominates \(R\). For every \(w\in X\), there is an
+\(e\in\HH\) with \(w\in X(e)\); any vertex in \(e\cap S\) is adjacent
+to \(w\). Hence \(O\) also dominates \(X\), and \(R\cup X=V\).
+\end{proof}
+
+\subsection{An effective constant-round implementation}
+\label{sec:implementation}
+
+\paragraph{The preprocessing takes at most six rounds.}
+We give an explicit schedule, including the initial exchange of identifiers.
+In the first round, every vertex sends its identifier to all its neighbors.
+In the second, it sends its complete list of neighbor identifiers.
+After these rounds a vertex $v$ knows $N(v)$ and $N(w)$ for every
+$w\in N(v)$.  In particular it knows every vertex at distance at most
+two from $v$, and every edge incident with a neighbor of $v$.
+
+This information determines all original hard sets containing $v$.
+For a singleton the request set is $N(v)$.  For a candidate pair
+$\{v,u\}$, it is
+\[
+ X(\{v,u\})=\{w\in N(v):u\in N(w)\},
+\]
+which $v$ can compute from the received lists.  Only vertices
+$u\ne v$ at distance at most two need be considered: a pair with no
+common neighbor is not hard, and every pair with a common neighbor
+has this distance bound.  For either kind of tested set $A$ containing
+$v$, put $W=X(A)\subseteq N(v)$.  Any vertex that dominates at least
+one request of $W$ lies in
+\[
+ N[W]=\bigcup_{w\in W}N[w]\subseteq B_2(v),
+\]
+where $B_2(v)$ is the closed distance-two ball.  In a proposed cover,
+vertices outside $N[W]$ cover no request and can be deleted.  Thus $v$
+can decide $Q$-hardness by enumerating all subsets of
+$N[W]\setminus A$ of size at most $Q$ and testing whether they cover
+$W$.  The received neighbor lists give exactly the incidences needed
+for every such test.  This also handles $W=\varnothing$, for which
+the empty cover succeeds.  Consequently, by the end of round two,
+$v$ knows its complete hard-partner set $P(v)$ and whether it belongs
+to the singleton-center set $C_*$.
+
+In rounds three and four, vertices forward their center bits, tagged
+with their identifiers, to distance two.  Every $v$ then knows the
+center bits of all $u\in P(v)$, so it can determine its complete list
+of incident retained hyperedges: its singleton if $v\in C_*$, and
+each original hard pair whose two endpoints lie outside $C_*$.  All
+endpoints obtain consistent descriptions because both hardness and
+the two-center test are symmetric.
+
+In round five, every vertex sends its list of incident retained
+hyperedges to all its graph neighbors.  A receiving vertex $w$ is in
+$X$ exactly when one of the received hyperedges $e$ satisfies
+$e\subseteq N(w)$.  The forward implication follows because every
+endpoint of such an $e$ is a neighbor of $w$ and sends its incident
+edge list; the reverse implication is the definition of $X(e)$.
+Thus $w$ determines whether it belongs to $R=V\setminus X$.
+In round six, vertices exchange their residual-membership bits.
+Every vertex $v$ now knows $R\cap N[v]$, all retained hyperedges
+incident with $v$, and hence its complete mixed packing row.
+
+The length-one or length-two routes used for pair variables are
+already available from the information obtained in round two.
+For a pair at distance two, both endpoints know its common neighbors
+and can choose the one with smallest identifier.  All messages and
+enumerations in this schedule are finite; their size need not be
+bounded.  The schedule applies to every finite graph, without knowing
+its order or maximum degree and without testing planarity.
+
+
+\paragraph{Simulating the packing incidence network.}
+We apply the packing lemma to the residual vertex set $R$ and the
+hypergraph $\mathcal H$.  The properties needed for this application are
+\[
+ \begin{gathered}
+ 1\leq |e|\leq2,\qquad \operatorname{diam}_G(e)\leq2
+       \quad(e\in\mathcal H),\\
+ |\{e\in\mathcal H:v\in e\}|\leq T,\qquad
+ |N(v)\cap R|\leq B_0=Q(3Q+2)\quad(v\in V(G)).
+ \end{gathered}
+\]
+The variables are $y_w$ for $w\in R$ and $z_e$ for
+$e\in\mathcal H$.  A vertex row has the form
+\begin{equation}\label{pack:mixed-row}
+ \ell_v=\sum_{w\in R\cap N[v]}y_w
+             +\sum_{e\in\mathcal H:v\in e}z_e\leq1.
+\end{equation}
+In addition there is one personal row $y_w\leq1/7$ for each $w\in R$.
+All variables are nonnegative.  Add the common cap $M=1$.
+This cap is redundant for $y_w$ because of its personal row, and for
+$z_e$ because $e\ne\varnothing$: a unit-capacity row at any endpoint
+of $e$ contains $z_e$, and all other terms in that row are nonnegative.
+The vertex rows have at most $B_0+1+T$ variables and the personal rows
+have one.  Thus Lemma~\ref{pack:theorem} applies with the fixed parameters
+\begin{equation}\label{pack:parameters}
+ K=B_0+1+T,\qquad C=\{1,1/7\},\qquad M=1.
+\end{equation}
+Let $L=|\mathcal P(K,C,1)|-1$ for these parameters.
+
+Host the variable $y_w$, its personal row, and the vertex row at $w$
+at the graph vertex $w$.  Host $z_e$ at the endpoint of $e$ with
+smallest identifier.  Vertex row $v$ is hosted at $v$, whether or not
+$v\in R$.  Every incidence of a $y$ variable with a vertex row has
+host distance at most one, and the personal row is at the same host.
+Every incidence of $z_e$ with a vertex row has host distance at most
+two, by the diameter property of $e$.
+
+The local preprocessing supplies these incidences and their endpoint
+identifiers.  For a pair at distance two, choose a length-two route
+deterministically, for example through its common neighbor of smallest
+identifier; use its edge if the two endpoints are adjacent.  Constant
+radius neighborhood information suffices to choose and record these
+routes.  A message of the virtual incidence network is tagged with its
+variable and row names and sent along the chosen route.  Every virtual
+communication phase takes at most two graph rounds.  If many virtual
+messages use the same physical edge, concatenate them into one finite
+message.  This is permitted in LOCAL and creates no additional rounds.
+Messages between nodes hosted at the same vertex require no communication.
+Consequently the two phases of each palette level take at most four
+graph rounds, for a total of at most $4L$ rounds for the packing scan.
+
+At the end of the scan, each vertex row host knows its exact load
+$\ell_v$, and each vertex knows its own $y_v$, with $y_v=0$ outside $R$.
+It can decide locally whether
+\[
+ v\in S
+ \quad\Longleftrightarrow\quad
+ \ell_v\geq1-\tfrac12(1/7-y_v).
+\]
+After one exchange of these membership bits, each vertex can decide
+whether it belongs to $U=R\setminus N[S]$ and hence to $O=S\cup U$.
+Using at most ten rounds for the constant-radius preprocessing, and
+allowing another ten rounds for route initialization and final
+membership exchanges, the safe total bound is $4L+20$.  Its numerical
+value is a single constant, since $Q$ and $T$ are fixed.  No vertex is
+given $n$, the maximum degree, or a planar embedding.
+
+All preprocessing tests enumerate finite vertex sets within fixed
+radius neighborhoods, with the thresholds $Q$ and $T$ fixed.  Although
+these neighborhoods may have unbounded size, they are finite, so the
+tests are computable using the unbounded local computation allowed by
+the model.  The rational packing arithmetic can be put on the common
+integer grid described above.  If $Y_v=Dy_v$ and $L_v=D\ell_v$, the
+selection test is the integer inequality
+\[
+ 13D+7Y_v\leq14L_v.
+\]
+Thus the construction is an actual deterministic LOCAL program with
+finite descriptions of its constants.  The same fixed program is
+defined on every finite input graph; its correctness and approximation
+guarantees use the planar preprocessing bounds.  It never needs to
+test whether its input is planar.
+
+\section{The slack available in rounding}
+\label{sec:rounding}
+
+The analysis compares the output with an arbitrary dominating set \(D\).
+The algorithm never computes or receives this set. We first record the
+slack furnished by rounding, and then show that almost all vertices of
+\(D\) are suitable endpoints for planar contractions.
+
+\subsection{Finite level sums}
+
+All weights are rational. Choose a positive integer \(h\), divisible by
+\(14\), such that \(hy_v\) is an integer for every vertex. This common
+denominator is used only in the analysis. For a function \(F\) on the
+positive grid points and \(a\in\{1/14,1/7\}\), write
+\begin{equation}\label{eq:level-average}
+ \avg{F(t)}{a}:=\frac1h\sum_{j=1}^{ah}F(j/h).
+\end{equation}
+This is a finite sum, so it is linear and preserves inequalities.
+For a constant \(c\), \(\avg{c}{a}=ac\). For
+\(p\in[0,\theta]\) with \(hp\) integral,
+\begin{equation}\label{eq:layer-cake}
+ \avg{\ind_{\{t\leq p\}}}{\theta}=p.
+\end{equation}
+Indeed, exactly \(hp\) of the grid points \(j/h\), \(1\leq j\leq h\theta\),
+are at most \(p\). Thus this notation is a finite version of the usual
+layer-cake argument; no limiting or integration theorem is needed.
+If \(F(t)\geq0\), then
+\(\avg{F(t)}{1/14}\leq\avg{F(t)}{\theta}\).
+
+Put
+\begin{equation}\label{eq:rounding-quantities}
+ \begin{gathered}
+ Y=\sum_{v\in V}y_v,\qquad Z=\sum_{e\in\HH}z_e,\qquad
+ \delta=\sum_{s\in S}(\theta-y_s),\\
+ B=N[S]\setminus S,\qquad Y_B=y(B),\\
+ W_t=S\cup\{v\in B:y_v\geq t\},\qquad
+ A_t=\{s\in S:y_s\geq t\},\\
+ J=\avg{\Def(W_t)+\Def(A_t)}{\theta},\qquad
+ J_0=\avg{\Def(W_t)}{\theta}.
+ \end{gathered}
+\end{equation}
+All these quantities are nonnegative, and \(J_0\leq J\).
+Every vertex with positive weight lies in exactly one of \(S,B,U\):
+weights vanish off \(R\), and \(R\setminus N[S]=U\). By
+\cref{lem:output-basic}, \(y(U)=\theta|U|\) and \(S\cap U=\varnothing\).
+Also \(y(S)=\theta|S|-\delta\). Consequently
+\begin{equation}\label{eq:mass-identity}
+ 7Y-|O|=7Y_B-7\delta.
+\end{equation}
+
+\begin{lemma}[Rounding with retained slack]\label{lem:rounding}
+The algorithm's output satisfies
+\begin{equation}\label{eq:rounding-slack}
+ 7Y-|O|\geq
+ -\frac{13}{3}Z+\frac7{12}\delta+\frac12Y_B+\frac{13}{6}J.
+\end{equation}
+\end{lemma}
+\begin{proof}
+Consider the weighted neighbor incidence sum
+\[
+ M_S=\sum_{s\in S}\sum_{v\in N(s)}y_v.
+\]
+The selection condition in \eqref{eq:output} and the row definition give
+\[
+ \sum_{v\in N(s)}y_v
+ \geq1-\theta+\frac{\theta-y_s}{2}
+       -\sum_{\substack{e\in\HH\\s\in e}}z_e .
+\]
+Each hyperedge has at most two endpoints, so summing yields
+\begin{equation}\label{eq:incidence-lower}
+ M_S\geq\frac67|S|+\frac12\delta-2Z.
+\end{equation}
+
+For the upper bound, count the contribution of each graph edge to
+\(\avg{e_G(W_t)+e_G(A_t)}{\theta}\).
+An edge \(uv\) with both endpoints in \(S\) contributes
+\(\theta+\min\{y_u,y_v\}\), which is at least \(y_u+y_v\), since
+\(\max\{y_u,y_v\}\leq\theta\). This pays its two contributions to \(M_S\).
+An edge from \(S\) to a vertex \(v\in B\) contributes exactly \(y_v\),
+paying its sole contribution to \(M_S\). All other edge contributions
+are nonnegative, and these two kinds account for every term in \(M_S\).
+Using \eqref{eq:layer-cake} and the definition of the deficit, we get
+\begin{align}
+ M_S
+ &\leq\avg{e_G(W_t)+e_G(A_t)}{\theta}\notag\\
+ &=3\avg{|W_t|+|A_t|}{\theta}-J\notag\\
+ &=3\bigl(\theta|S|+Y_B+y(S)\bigr)-J\notag\\
+ &=\frac67|S|+3Y_B-3\delta-J.
+ \label{eq:incidence-upper}
+\end{align}
+Comparing \eqref{eq:incidence-lower} and \eqref{eq:incidence-upper}
+cancels the \(|S|\) term and proves
+\[
+ 3Y_B\geq\frac72\delta+J-2Z.
+\]
+Substitute this in \eqref{eq:mass-identity} to obtain
+\[
+ 7Y-|O|\geq-\frac{14}{3}Z+\frac76\delta+\frac73J.
+\]
+Take \(13/14\) of this inequality and add \(1/14\) of the exact
+identity \eqref{eq:mass-identity}. The left side is unchanged. The
+coefficients on the right become respectively
+\(-13/3,\ 7/12,\ 1/2,\ 13/6\), proving the assertion.
+\end{proof}
+
+\subsection{Comparison with an integral dominating set}
+
+Fix any dominating set \(D\). Separate the hyperedge mass into
+\[
+ Z_h=\sum_{\substack{e\in\HH\\e\cap D\ne\varnothing}}z_e,\qquad
+ Z_m=\sum_{\substack{e\in\HH\\e\cap D=\varnothing}}z_e,
+ \qquad Z=Z_h+Z_m .
+\]
+Here the subscripts mean \emph{hit} and \emph{missed}. Define the unused
+capacity and the two overcount terms by
+\begin{equation}\label{eq:comparison-slack}
+ \begin{aligned}
+ L_D&=\sum_{d\in D}(1-\ell_d),\\
+ M_y&=\sum_{w\in R}y_w\bigl(|N[w]\cap D|-1\bigr),\\
+ M_z&=\sum_{\substack{e\in\HH\\e\cap D\ne\varnothing}}
+                  z_e\bigl(|e\cap D|-1\bigr),\\
+ K_D&=L_D+M_y+M_z .
+ \end{aligned}
+\end{equation}
+All terms are nonnegative: rows are feasible, \(D\) dominates every
+vertex, and a hit hyperedge has at least one endpoint in \(D\).
+Interchanging finite sums in the rows of \(D\) gives
+\[
+ \sum_{d\in D}\ell_d
+ =\sum_{w\in R}y_w|N[w]\cap D|
+   +\sum_{e\in\HH}z_e|e\cap D|
+ =Y+M_y+Z_h+M_z .
+\]
+It follows that
+\begin{equation}\label{eq:comparison-identity}
+ |D|=Y+Z_h+K_D.
+\end{equation}
+This is an exact accounting identity, not an assertion that the packing
+is optimal.
+
+Define the common budget
+\begin{equation}\label{eq:budget}
+ \budget=K_D+Z_h+\delta+Y_B+J_0\geq0.
+\end{equation}
+Combining \cref{lem:rounding} with \eqref{eq:comparison-identity} gives
+\begin{align}
+ 7|D|-|O|
+ &\geq7K_D+\frac83Z_h+\frac7{12}\delta
+          +\frac12Y_B+\frac{13}{6}J-\frac{13}{3}Z_m\notag\\
+ &\geq\frac12\budget-\frac{13}{3}Z_m.
+ \label{eq:budget-gap}
+\end{align}
+For the second inequality, use \(J\geq J_0\) and the fact that each
+of \(7,8/3,7/12,1/2,13/6\) is at least \(1/2\).
+We will prove that \(Z_m\leq\budget/100\).
+
+\subsection{Exceptional vertices of the comparison set}
+
+Let
+\begin{equation}\label{eq:bad-good}
+ D_b=\{d\in D:y_d<1/14\}\cup(D\cap U),\qquad
+ D_g=D\setminus D_b,\qquad
+ S_0=\{s\in S:y_s=0\}.
+\end{equation}
+The following bounds make these exceptional sets affordable.
+
+\begin{lemma}\label{lem:bad-counts}
+For every dominating set \(D\),
+\begin{equation}\label{eq:bad-counts}
+ |D_b|\leq35\budget,\qquad |S_0|\leq7\budget .
+\end{equation}
+Moreover, \(D_g\subseteq W_t\) and \(y_d>0\) for every \(d\in D_g\)
+and every \(0<t\leq1/14\).
+\end{lemma}
+\begin{proof}
+If \(s\in S\) has \(y_s<1/14\), its contribution
+\(\theta-y_s\) to \(\delta\) is greater than \(1/14\).
+If \(d\in D\setminus S\) has \(y_d<1/14\), the failure of the
+selection condition gives
+\[
+ 1-\ell_d>\frac{\theta-y_d}{2}>\frac1{28}.
+\]
+Thus
+\begin{equation}\label{eq:low-weight-count}
+ |\{d\in D:y_d<1/14\}|\leq14\delta+28L_D.
+\end{equation}
+
+For \(d\in D\cap U\), there is no member of \(S\) in \(N[d]\).
+There are at most six members of \(U\) in \(N[d]\): seven such
+vertices would, by \(y_u=1/7\), force \(\ell_d\geq1\), making
+\(d\in S\), a contradiction. Every positive-weight vertex in
+\(N[d]\) therefore belongs to \(U\) or \(B\), and
+\[
+ \ell_d
+ \leq\frac67+\sum_{w\in B\cap N[d]}y_w
+              +\sum_{\substack{e\in\HH\\d\in e}}z_e.
+\]
+Rearrange and sum over \(d\in D\cap U\).
+The unused row capacities sum to at most \(L_D\).
+The boundary terms sum to at most \(Y_B+M_y\): for each \(w\in B\),
+its multiplicity is at most \(|N[w]\cap D|\), and a positive
+weight implies \(w\in R\). The hyperedge terms sum to at most
+\(Z_h+M_z\), by the definition of \(M_z\).
+Consequently
+\begin{equation}\label{eq:du-count}
+ |D\cap U|\leq7(L_D+Y_B+M_y+Z_h+M_z)
+             =7(K_D+Y_B+Z_h).
+\end{equation}
+Combining \eqref{eq:low-weight-count} and \eqref{eq:du-count}, and
+using \(L_D\leq K_D\), gives
+\[
+ |D_b|\leq14\delta+35K_D+7Y_B+7Z_h\leq35\budget.
+\]
+Each member of \(S_0\) contributes \(1/7\) to \(\delta\), so
+\(|S_0|\leq7\delta\leq7\budget\).
+
+Finally, a member \(d\in D_g\) has \(y_d\geq1/14>0\), hence lies
+in \(R\). Since it is not in \(U=R\setminus N[S]\), it lies in
+\(N[S]\). It therefore belongs either to \(S\) or to
+\(\{v\in B:y_v\geq t\}\) for every \(0<t\leq1/14\).
+This proves \(D_g\subseteq W_t\).
+\end{proof}
+
+\section{A planar count for many pairs}
+\label{sec:faces}
+
+\begin{lemma}[Nontriangular darts, including small components]
+\label{geom:nontriangular-darts}
+Let $J$ be a finite simple planar graph. Draw its connected components
+separately on spheres, and use their facial permutations
+$\varphi=\sigma\circ\alpha$ as above. Let $b$ be the number of darts on
+facial boundaries whose length is not three. Then, with
+$\Delta_J=3|V(J)|-|E(J)|$,
+\begin{equation}\label{geom:bad-dart-bound}
+ b\leq4\Delta_J.
+\end{equation}
+\end{lemma}
+\begin{proof}
+For a connected component with $n\geq3$ vertices, all facial boundaries
+have length at least three. A nontriangular one has length $\ell\geq4$,
+so $\ell\leq4(\ell-3)$. Summing, and including zero contributions from
+triangles, gives
+\[
+ b_{\rm comp}
+ \leq4\sum_{\rm faces}(\ell-3)
+ =4(2e-3f)=4(3n-e-6)\leq4(3n-e).
+\]
+The equality uses Euler's formula. A component on two vertices is $K_2$.
+Its two darts form one boundary of length two, so
+$b_{\rm comp}=2\leq4(6-1)$. An isolated vertex has no darts and satisfies
+$b_{\rm comp}=0\leq4\cdot3$. Sum over components; both $b$ and $3n-e$
+are additive. The empty graph has both sides zero.
+\end{proof}
+
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[scale=1.1]
+ \begin{scope}
+  \coordinate (a) at (-1.2,-.6);
+  \coordinate (b) at (1.2,-.6);
+  \coordinate (c) at (0,1.5);
+  \coordinate (x) at (0,.15);
+  \fill[orange!15] (a)--(x)--(b)--cycle;
+  \draw[edge] (a)--(c)--(b) (a)--(x)--(b) (c)--(x);
+  \draw[newedge,-{Stealth[length=2.4mm]},
+    shorten >=3.5mm,shorten <=3.5mm] (b)--(a);
+  \node[vertex] at (a) {\(a\)};
+  \node[vertex] at (b) {\(b\)};
+  \node[vertex] at (c) {\(c\)};
+  \node[witness] at (x) {\(x\)};
+  \node[font=\small,align=center] at (0,-1.9)
+   {A triangular corner identifies \(x\)\\from the oriented side \((b,a)\)};
+ \end{scope}
+ \begin{scope}[xshift=6cm]
+  \coordinate (a) at (-1.2,-.6);
+  \coordinate (b) at (1.2,-.6);
+  \coordinate (c) at (0,1.5);
+  \coordinate (d) at (0,-1.35);
+  \coordinate (x) at (0,.15);
+  \fill[orange!15] (x)--(a)--(d)--(b)--cycle;
+  \draw[edge] (a)--(c)--(b) (a)--(x)--(b) (c)--(x)
+    (a)--(d)--(b);
+  \draw[thick,dashed,pairpurple] (a)--(b);
+  \node[vertex] at (a) {\(a\)};
+  \node[vertex] at (b) {\(b\)};
+  \node[vertex] at (c) {\(c\)};
+  \node[vertex] at (d) {\(d\)};
+  \node[witness] at (x) {\(x\)};
+  \node[font=\small,align=center] at (0,-1.9)
+   {A nontriangular corner is charged\\to the planar deficit};
+ \end{scope}
+\end{tikzpicture}
+\caption{The two types of degree-three witnesses in the face count.
+Blue vertices belong to \(W\); the orange vertex \(x\) lies outside \(W\).
+On the left, the face with boundary \(a,x,b,a\) assigns the pair
+incidence to the dart \((b,a)\), whose next facial dart ends at \(x\).
+On the right, the shaded face has boundary \(x,a,d,b,x\).
+The dashed segment \(ab\) denotes a pair in \(\mathcal P\), not an
+edge of the planar graph. This distinction is allowed in the lemma.}
+\label{fig:corners}
+\end{figure}
+
+\begin{lemma}[Triangular corners of degree-three vertices]
+\label{geom:triangle-injection}
+Fix planar rotations of $J$. Let $\mathcal P$ be any graph of pairs on
+$V(J)$ with $m$ edges. Let $C_3$ consist of vertices of degree three in
+$J$ for which every incident corner belongs to a triangular face. Then
+\[
+ |\{(x,\{a,b\}):x\in C_3,\ \{a,b\}\in E(\mathcal P),
+                         \ a,b\in N_J(x)\}|\leq2m.
+\]
+\end{lemma}
+\begin{proof}
+Represent a corner at $x$ by an incoming dart $q=(a,x)$. If $(x,b)$
+follows $(x,a)$ in the cyclic order at $x$, then $\varphi q=(x,b)$.
+The corner is triangular precisely when $q$ lies in a face cycle of
+length three.
+
+Since $x$ has three neighbors, their cyclic successor is a three-cycle.
+For any distinct neighbors $a,b$, exactly one follows the other.
+Orient their names so that $a$ is followed by $b$, and take $q=(a,x)$.
+The triangular corner gives
+\[
+ q=(a,x),\qquad \varphi q=(x,b),\qquad
+ p:=\varphi^2q=(b,a),\qquad \varphi p=q.
+\]
+In particular, the opposite side $ab$ is an edge of $J$.
+Map the incidence $(x,\{a,b\})$ to this oriented side $p=(b,a)$.
+The dart $p$ recovers its underlying unordered pair and recovers $x$ as
+the final endpoint of $\varphi p$. Thus the map is injective. Each of
+the $m$ edges of $\mathcal P$ has only two orientations. A pair that is
+not an edge of $J$ cannot occur as an image. The asserted bound follows.
+\end{proof}
+
+\begin{lemma}[Ambient pair incidence]\label{geom:ambient-pairs}
+Let $W,C$ be disjoint vertex sets in a finite simple planar graph $G$.
+Suppose every $x\in C$ has at least three neighbors in $W$.
+Let $\mathcal P$ be a graph of pairs on $W$ with $m$ edges and maximum
+degree at most $T$; its edges need not belong to $G$. Then
+\begin{equation}\label{geom:ambient-strong}
+ \sum_{\{a,b\}\in E(\mathcal P)}|N_G(a)\cap N_G(b)\cap C|
+ \leq2m+6T\Def(W).
+\end{equation}
+In particular, the inequality holds with $12T$ in place of $6T$.
+No connectivity or minimum-order assumption is required.
+\end{lemma}
+\begin{proof}
+Let $J$ have vertex set $W\cup C$, all edges of $G[W]$, and all edges
+between $W$ and $C$. This deletes any edges inside $C$, so $J$ is
+planar, $C$ is independent, and
+$d_x:=\deg_J(x)=|N_G(x)\cap W|\geq3$ for $x\in C$.
+The incidence count is unchanged; by interchanging finite sums it is
+\[
+ I=\sum_{x\in C}c_J(x),\qquad
+ c_J(x)=|\{\{a,b\}\in E(\mathcal P):a,b\in N_J(x)\}|.
+\]
+Set
+\[
+ E_C=\sum_{x\in C}(d_x-3)\geq0,\qquad
+ \Delta_J=3|V(J)|-|E(J)|\geq0.
+\]
+Every edge of $J$ is either inside $W$ or has exactly one endpoint in
+$C$. Hence
+\[
+ |E(J)|=e_G(W)+\sum_{x\in C}d_x,
+ \qquad
+ \Def(W)=\Delta_J+E_C.                         \tag{*}
+\]
+
+Fix componentwise planar rotations, and let $b$ be the number of
+nontriangular darts. Partition $C$ into: degree-three vertices whose
+corners are all triangular; degree-three vertices having a nontriangular
+corner; and vertices of degree at least four. The first class contributes
+at most $2m$ by Lemma~\ref{geom:triangle-injection}.
+
+For each vertex $x$ of the second class, choose an incoming dart
+$q_x=(a_x,x)$ in a nontriangular corner. These darts are distinct,
+because their final endpoints are distinct. Thus there are at most $b$
+vertices in this class. Each contributes at most $3T/2$, by
+Lemma~\ref{geom:pair-degree} applied to its three neighbors.
+
+For $d_x\geq4$, the same bound gives
+\[
+ c_J(x)\leq Td_x/2\leq2T(d_x-3).
+\]
+The last inequality follows from $d_x\geq4$ and $T\geq0$. Summing it
+bounds the third class by $2TE_C$. Combining the three bounds and
+Lemma~\ref{geom:nontriangular-darts} yields
+\[
+ \begin{split}
+ I&\leq2m+\tfrac32Tb+2TE_C\\
+  &\leq2m+6T\Delta_J+2TE_C\\
+  &\leq2m+6T(\Delta_J+E_C)=2m+6T\Def(W),
+ \end{split}
+\]
+where the last equality is (*). The $12T$ version follows from
+$\Def(W)\geq0$.
+\end{proof}
+
+\section{Charging hyperedges missed by a dominating set}
+\label{sec:charging}
+
+Fix an arbitrary dominating set $D$, and a domination assignment
+\[
+ f:V(G)\to D,\qquad f(w)\in N[w],\qquad f(d)=d\quad(d\in D).
+\]
+This choice is only for analysis; the algorithm does not know $D$ or
+$f$. Let $m_1,m_2$ count the singleton and pair edges of $\mathcal H$
+missed by $D$. Let $\mathcal P$ be the graph of the $m_2$ missed pairs;
+its maximum degree is at most $T$.
+
+For $0<t\leq1/14$, recall
+\[
+ W_t=S\cup\{v\in N[S]\setminus S:y_v\geq t\},\qquad
+ S_0=\{s\in S:y_s=0\},
+\]
+\[
+ D_b=\{d\in D:y_d<1/14\}\cup(D\cap U),\qquad D_g=D\setminus D_b.
+\]
+The geometric arguments use
+\begin{equation}\label{geom:good-in-level}
+ D_g\subseteq W_t,\qquad y_d>0\quad(d\in D_g),
+\end{equation}
+and
+\begin{equation}\label{geom:common-zero}
+ w\in X(e),\ e\in\mathcal H\quad\Longrightarrow\quad y_w=0.
+\end{equation}
+Indeed, a member of $D_g$ has weight at least $1/14$, hence belongs to
+$R$, and does not belong to $U=R\setminus N[S]$. It therefore lies in
+$N[S]$ and in $W_t$. The second fact holds because
+$X(e)\subseteq X=V(G)\setminus R$ and the weights are zero outside $R$.
+
+Every retained hyperedge meets $S$. If all endpoint rows of a hyperedge
+were slack, its $z_e$ coordinate could be increased, contrary to
+maximality. If the redundant cap $z_e\leq1$ is attained, its unit rows
+are already tight. A tight row belongs to $S$, because $y_v\leq1/7$.
+In particular, every retained singleton center is in $S$.
+
+\begin{lemma}[Singleton charge]\label{geom:singleton-charge}
+For every $0<t\leq1/14$,
+\begin{equation}\label{geom:singleton-charge-eq}
+ (T-9)m_1\leq2|S_0|+2|D_b|+\Def(W_t).
+\end{equation}
+\end{lemma}
+\begin{proof}
+Let $A$ be the missed singleton centers. Then $|A|=m_1$,
+$A\cap D=\varnothing$, and $A\subseteq S\subseteq W_t$.
+Each $\{a\}$ is $T$-hard. The set $f(N(a))\subseteq D$ dominates
+$N(a)$, since each $w\in N(a)$ has its assigned dominator in this set.
+It avoids $a$, so hardness gives $|f(N(a))|\geq T+1$.
+Consequently
+\[
+ P=\{(a,d):a\in A,\ d\in f(N(a))\}
+ \quad\text{satisfies}\quad |P|\geq(T+1)m_1.
+\]
+For each distinct pair $(a,d)\in P$, choose one witness
+$w=w_{a,d}\in N(a)$ with $f(w)=d$. The map
+\begin{equation}\label{geom:witness-injection}
+ (a,d)\longmapsto(a,w_{a,d})
+\end{equation}
+is injective: the image recovers $a$ and $w$, hence $d=f(w)$.
+
+Partition $P$ in the following order:
+\begin{align*}
+ P_1&=\{(a,d)\in P:w_{a,d}\in A\},\\
+ P_2&=\{(a,d)\in P:w_{a,d}\notin A,\ w_{a,d}\in S_0\},\\
+ P_3&=\{(a,d)\in P:w_{a,d}\notin A\cup S_0,\ d\in D_b\},\\
+ P_4&=\{(a,d)\in P:w_{a,d}\notin A\cup S_0,\ d\in D_g\}.
+\end{align*}
+These classes are disjoint and exhaustive. Every chosen witness has
+weight zero, since it belongs to $N(a)=X(\{a\})$ and
+\eqref{geom:common-zero} applies. A witness outside $A\cup S_0$ is
+therefore outside $S$ and, as $t>0$, outside $W_t$.
+
+For $P_1$, \eqref{geom:witness-injection} maps into the oriented edges
+of $G[A]$, so
+\[
+ |P_1|\leq2e_G(A)\leq6m_1.
+\]
+For $P_2$, it maps into edges between the disjoint sets $A$ and
+$S_0\setminus A$, with one orientation per edge. Thus
+\[
+ |P_2|\leq e_G(A,S_0\setminus A)
+ \leq2(|A|+|S_0\setminus A|)\leq2(m_1+|S_0|).
+\]
+For $P_3$, Lemma~\ref{geom:assigned-incidences}, with endpoint sets
+$A,D_b$, applies because each witness avoids $A$. It gives
+\[
+ |P_3|\leq2(m_1+|D_b|).
+\]
+A witness already in $D_b$ is allowed: it is fixed as its own assigned
+center and is not contracted to another vertex.
+
+For $P_4$, both endpoints are in $W_t$, while each witness is outside
+$W_t$. The edge $ad$ is absent from $G$: otherwise $d\in N(a)$ would
+have weight zero by \eqref{geom:common-zero}, contradicting
+$d\in D_g$ and \eqref{geom:good-in-level}. The new-edge assertion of
+Lemma~\ref{geom:assigned-incidences} therefore gives
+\[
+ |P_4|\leq\Def(W_t).
+\]
+All contractions for this last class can be performed together while
+fixing $W_t$ and retaining its induced edges. They add the distinct
+previously absent edges indexed by $P_4$. The contraction used for
+$P_3$ need not be the same contraction.
+
+Adding the four estimates proves
+\[
+ (T+1)m_1\leq|P|
+ \leq10m_1+2|S_0|+2|D_b|+\Def(W_t).
+\]
+Subtracting $10m_1$ gives \eqref{geom:singleton-charge-eq}.
+\end{proof}
+
+\begin{lemma}[Pair charge]\label{geom:pair-charge}
+For every $0<t\leq1/14$,
+\begin{equation}\label{geom:pair-charge-eq}
+ (Q-86T-2)m_2\leq3T|D_b|+T|S_0|+12T\Def(W_t).
+\end{equation}
+\end{lemma}
+\begin{proof}
+Let $A$ be the endpoints of the $m_2$ missed pairs. Then
+$|A|\leq2m_2$ and $A\cap D=\varnothing$.
+Every missed pair $e$ is $Q$-hard. Its common neighborhood $X(e)$
+avoids $e$, because the graph has no loops, and dominates itself using
+closed neighborhoods. Hence $|X(e)|\geq Q+1$.
+The incidence set
+\[
+ \mathcal I=\{(e,w):e\in E(\mathcal P),\ w\in X(e)\}
+\]
+satisfies
+\begin{equation}\label{geom:pair-incidence-lower}
+ |\mathcal I|=\sum_{e\in E(\mathcal P)}|X(e)|
+ \geq(Q+1)m_2\geq Qm_2.
+\end{equation}
+With $c(w)$ as in Lemma~\ref{geom:pair-degree},
+$|\mathcal I|=\sum_w c(w)$. Every witness with $c(w)>0$ has weight
+zero by \eqref{geom:common-zero}.
+
+Partition these incidences by their witness:
+\begin{enumerate}[label=(\roman*)]
+\item $w\in A$;
+\item $w\notin A$ and $w\in S_0$;
+\item $w\notin A\cup S_0$ and $f(w)\in D_b$;
+\item $w\notin A\cup S_0$ and $f(w)\in D_g$.
+\end{enumerate}
+These classes are disjoint and exhaustive. Witnesses in the last two
+classes lie outside $W_t$: they have weight zero, and membership in
+$S$ would put them in $S_0$.
+
+By \eqref{geom:pairs-inside}, the first class has size at most
+\begin{equation}\label{geom:pair-cat-one}
+ 3T|A|\leq6Tm_2.
+\end{equation}
+By \eqref{geom:pairs-bipartite} for $A,S_0\setminus A$, the second
+class has size at most
+\begin{equation}\label{geom:pair-cat-two}
+ T(|A|+|S_0\setminus A|)\leq2Tm_2+T|S_0|.
+\end{equation}
+
+To treat multiplicities in the third class, let $C_b$ be its set of
+distinct witnesses. Contract the vertices of $C_b\setminus D$ to their
+assigned centers as in Lemma~\ref{geom:star-contraction}, obtaining a
+simple planar graph $F$. Witnesses already in $D$ are left fixed as
+their own centers. Every vertex of $A$ and $D_b$ is fixed, since $C_b$
+avoids $A$ and no vertex of $D$ is a leaf.
+
+For an incidence $(e,w)$ in this class, write $e=\{a,b\}$ and
+$d=f(w)$. The three vertices $a,b,d$ are distinct, because $a,b$ are
+distinct members of $A$ and $d\in D$. The edges $aw,bw$ become $ad,bd$
+in $F$. Map the incidence to $(e,d)$. For any fixed image
+$(\{a,b\},d)$, its preimages are distinct members of
+\[
+ N_G(a)\cap N_G(b)\cap N_G[d].
+\]
+Lemma~\ref{geom:outside-pair} bounds their number by three, including
+the possible preimage $w=d$.
+
+Every image $(e,d)$ has both endpoints of $e$ in $N_F(d)\cap A$.
+The pair graph is still the original $\mathcal P$, with maximum
+degree at most $T$. Applying \eqref{geom:pairs-bipartite} in the planar
+graph $F$ to the disjoint sets $A,D_b$ bounds the number of possible
+images by $T(|A|+|D_b|)$. Multiplying by the fiber bound three gives
+\begin{equation}\label{geom:pair-cat-three}
+ |\mathcal I_{\rm iii}|
+ \leq3T(|A|+|D_b|)\leq6Tm_2+3T|D_b|.
+\end{equation}
+Any extra edges created by contraction only enlarge the set of possible
+images; that enlarged set is still bounded by the planar bipartite
+edge count.
+
+For the fourth class, put $W'=W_t\cup A$ and let $C_g$ be its set of
+distinct witnesses. Each $w\in C_g$ lies outside $W'$, while
+$d=f(w)\in D_g\subseteq W_t$. Choose any missed pair $\{a,b\}$
+witnessed by $w$. The three vertices $a,b,d$ are distinct and in $W'$.
+The edges $wa,wb$ exist. Also $wd$ exists: domination gives either
+$w=d$ or adjacency, and equality is impossible because $w\notin W'$
+and $d\in W'$. Hence $w$ has at least three neighbors in $W'$.
+All pair endpoints are in $W'$. The $12T$ form of
+Lemma~\ref{geom:ambient-pairs} gives
+\begin{equation}\label{geom:pair-cat-four-pre}
+ |\mathcal I_{\rm iv}|\leq2m_2+12T\Def(W').
+\end{equation}
+This counts precisely the incidences at witnesses in $C_g$, since
+their category depends only on $w$, not on which pair they witness.
+
+Adding the vertices of $A$ retains every old induced edge on $W_t$.
+Therefore
+\[
+ \begin{split}
+ \Def(W')&=3|W'|-e_G(W')\\
+ &\leq3(|W_t|+|A|)-e_G(W_t)
+ =\Def(W_t)+3|A|\leq\Def(W_t)+6m_2.
+ \end{split}
+\]
+Thus
+\begin{equation}\label{geom:pair-cat-four}
+ |\mathcal I_{\rm iv}|\leq2m_2+12T\Def(W_t)+72Tm_2.
+\end{equation}
+Combining \eqref{geom:pair-incidence-lower} with the four bounds gives
+\[
+ Qm_2\leq(86T+2)m_2+3T|D_b|+T|S_0|+12T\Def(W_t),
+\]
+where $86=6+2+6+72$. Rearrangement proves the claim. For $m_2=0$,
+all the incidence sets are empty and the same inequalities remain valid.
+\end{proof}
+
+\section{The exact endpoint}
+\label{sec:endpoint}
+
+We now combine the pointwise planar charges with the budget from
+\cref{sec:rounding}. Recall that \(m_1,m_2\) count the hyperedges
+missed by the arbitrary dominating set \(D\).
+
+\begin{lemma}\label{lem:missed-budget}
+For the fixed constants in \eqref{eq:constants},
+\[
+ Z_m\leq\frac{\budget}{100}.
+\]
+\end{lemma}
+\begin{proof}
+Apply the finite average \eqref{eq:level-average} on
+\(0<t\leq1/14\) to \eqref{geom:singleton-charge-eq}, and multiply
+by \(14\). Since the deficit is nonnegative,
+\(\avg{\Def(W_t)}{1/14}\leq J_0\), and hence
+\[
+ (T-9)m_1\leq2|S_0|+2|D_b|+14J_0
+ \leq(14+70+14)\budget=98\budget.
+\]
+Here we used \cref{lem:bad-counts} and \(J_0\leq\budget\).
+The same operation on \eqref{geom:pair-charge-eq} gives
+\[
+ \begin{split}
+ (Q-86T-2)m_2
+ &\leq3T|D_b|+T|S_0|+168TJ_0\\
+ &\leq(105+7+168)T\budget=280T\budget.
+ \end{split}
+\]
+Both denominators below are strictly positive. More precisely,
+\[
+ T-9=999991>98000,\qquad
+ Q-86T-2=999913999998>280000T=280000000000.
+\]
+Therefore
+\[
+ \frac{98}{T-9}<\frac1{1000},\qquad
+ \frac{280T}{Q-86T-2}<\frac1{1000}.
+\]
+Every \(z_e\leq1\), so
+\[
+ Z_m\leq m_1+m_2
+ \leq\left(\frac{98}{T-9}+
+           \frac{280T}{Q-86T-2}\right)\budget
+ \leq\frac{\budget}{100}.
+\]
+The last weak inequality follows from
+\(2/1000<1/100\) and \(\budget\geq0\); it also covers
+\(\budget=0\) without a separate strict-inequality argument.
+\end{proof}
+
+\begin{proof}[Proof of \cref{thm:main}]
+The construction of \cref{sec:algorithm} is an effective deterministic
+constant-round algorithm, by \cref{pack:theorem} and the implementation
+in \cref{sec:implementation}. Its output \(O\) dominates \(G\) by
+\cref{lem:output-basic}. For every dominating set \(D\),
+\eqref{eq:budget-gap} and \cref{lem:missed-budget} yield
+\[
+ 7|D|-|O|
+ \geq\frac12\budget-\frac{13}{3}Z_m
+ \geq\left(\frac12-\frac{13}{300}\right)\budget
+ =\frac{137}{300}\budget\geq0.
+\]
+A minimum dominating set exists because the graph is finite and the
+whole vertex set is dominating. Choosing such a \(D\) proves
+\(|O|\leq7\gamma(G)\). All estimates used relaxed planar edge bounds
+valid for every order and every number of components, so no exceptional
+small or disconnected cases need to be removed. On the empty graph
+the algorithm outputs the empty set and the same inequality holds.
+\end{proof}
+
+The number of rounds is one fixed integer, at most \(4L+20\) for the
+explicit finite palette specified in \cref{sec:implementation}.
+Neither a limit over algorithms nor an input-dependent choice of an
+error tolerance is involved. The packing is only coordinatewise
+maximal, and its exact computation uses bounded row size rather than
+a maximum-degree bound on the input graph. The final comparison
+uses an integral dominating set through its domination assignment;
+the theorem does not assert the stronger inequality
+\(|O|\leq7\gamma_f(G)\).
+
+Combined with the lower bound of Hilke, Lenzen, and Suomela~\cite{HLS14},
+the theorem proves that seven is both the infimum and an attained
+approximation factor for deterministic constant-round planar domination.
+
+\begin{thebibliography}{99}
+\small\raggedright
+
+\bibitem{Linial92}
+Nathan Linial.
+Locality in distributed graph algorithms.
+\emph{SIAM Journal on Computing}, 21(1):193--201, 1992.
+\href{https://doi.org/10.1137/0221015}{doi:10.1137/0221015}.
+
+\bibitem{Suomela13}
+Jukka Suomela.
+Survey of local algorithms.
+\emph{ACM Computing Surveys}, 45(2), Article 24, 1--40, 2013.
+\href{https://doi.org/10.1145/2431211.2431223}{doi:10.1145/2431211.2431223}.
+
+\bibitem{LPW13}
+Christoph Lenzen, Yvonne-Anne Pignolet, and Roger Wattenhofer.
+Distributed minimum dominating set approximations in restricted families
+of graphs.
+\emph{Distributed Computing}, 26(2):119--137, 2013.
+\href{https://doi.org/10.1007/s00446-013-0186-z}{doi:10.1007/s00446-013-0186-z}.
+
+\bibitem{Waw14}
+Wojciech Wawrzyniak.
+A strengthened analysis of a local algorithm for the minimum dominating
+set problem in planar graphs.
+\emph{Information Processing Letters}, 114(3):94--98, 2014.
+\href{https://doi.org/10.1016/j.ipl.2013.11.008}{doi:10.1016/j.ipl.2013.11.008}.
+
+\bibitem{HLS14}
+Miikka Hilke, Christoph Lenzen, and Jukka Suomela.
+Brief announcement: Local approximability of minimum dominating set on
+planar graphs.
+In \emph{Proceedings of PODC 2014}, pages 344--346, 2014.
+\href{https://doi.org/10.1145/2611462.2611504}{doi:10.1145/2611462.2611504}.
+Full version: \href{https://arxiv.org/abs/1402.2549}{arXiv:1402.2549}.
+
+\bibitem{HSV22}
+Ozan Heydt, Sebastian Siebertz, and Alexandre Vigny.
+Local planar domination revisited.
+In \emph{SIROCCO 2022}, Lecture Notes in Computer Science 13298,
+pages 154--173. Springer, 2022.
+\href{https://doi.org/10.1007/978-3-031-09993-9_9}{doi:10.1007/978-3-031-09993-9\_9}.
+
+\bibitem{HKSS25}
+Ozan Heydt, Simeon Kublenz, Patrice Ossona de Mendez, Sebastian Siebertz,
+and Alexandre Vigny.
+Distributed domination on sparse graph classes.
+\emph{European Journal of Combinatorics}, 123:103773, 2025.
+\href{https://doi.org/10.1016/j.ejc.2023.103773}{doi:10.1016/j.ejc.2023.103773}.
+\href{https://arxiv.org/abs/2207.02669}{arXiv:2207.02669}.
+
+\bibitem{Waw26}
+Wojciech Wawrzyniak.
+Near-optimal distributed domination in planar graphs.
+Preprint, 2026.
+\href{https://arxiv.org/abs/2609.32736}{arXiv:2609.32736}.
+
+\bibitem{AS26}
+Saeed Amiri and Sebastian Siebertz.
+Almost optimal constant-round approximation of dominating set in graph
+classes with excluded minors.
+Preprint, 2026.
+\href{https://arxiv.org/abs/2610.09618}{arXiv:2610.09618}.
+
+\bibitem{Picavet26}
+Timoth{\'e} Picavet.
+Almost tight distributed approximation for domination in sparse graph classes.
+Preprint, 2026.
+\href{https://arxiv.org/abs/2610.31203}{arXiv:2610.31203}.
+
+\bibitem{BU17}
+Nikhil Bansal and Seeun William Umboh.
+Tight approximation bounds for dominating set on graphs of bounded arboricity.
+\emph{Information Processing Letters}, 122:21--24, 2017.
+\href{https://doi.org/10.1016/j.ipl.2017.01.011}{doi:10.1016/j.ipl.2017.01.011}.
+
+\bibitem{Dvorak19}
+Zden{\v e}k Dvo{\v r}{\'a}k.
+On distance $r$-dominating and $2r$-independent sets in sparse graphs.
+\emph{Journal of Graph Theory}, 91(2):162--173, 2019.
+\href{https://doi.org/10.1002/jgt.22426}{doi:10.1002/jgt.22426}.
+\href{https://arxiv.org/abs/1710.10010}{arXiv:1710.10010}.
+
+\bibitem{DGI24}
+Michal Dory, Mohsen Ghaffari, and Saeed Ilchi.
+Near-optimal distributed dominating set in bounded arboricity graphs.
+\emph{Distributed Computing}, 37(4):387--398, 2024.
+\href{https://doi.org/10.1007/s00446-023-00447-z}{doi:10.1007/s00446-023-00447-z}.
+\href{https://arxiv.org/abs/2206.05174}{arXiv:2206.05174}.
+
+\bibitem{KMW06}
+Fabian Kuhn, Thomas Moscibroda, and Roger Wattenhofer.
+The price of being near-sighted.
+In \emph{Proceedings of SODA 2006}, pages 980--989, 2006.
+\href{https://doi.org/10.1145/1109557.1109666}{doi:10.1145/1109557.1109666}.
+
+\bibitem{KMW16}
+Fabian Kuhn, Thomas Moscibroda, and Roger Wattenhofer.
+Local computation: Lower and upper bounds.
+\emph{Journal of the ACM}, 63(2), Article 17, 1--44, 2016.
+\href{https://doi.org/10.1145/2742012}{doi:10.1145/2742012}.
+\href{https://arxiv.org/abs/1011.5470}{arXiv:1011.5470}.
+
+\bibitem{AS10}
+Matti {\AA}strand and Jukka Suomela.
+Fast distributed approximation algorithms for vertex cover and set cover
+in anonymous networks.
+In \emph{Proceedings of SPAA 2010}, pages 294--302, 2010.
+\href{https://doi.org/10.1145/1810479.1810533}{doi:10.1145/1810479.1810533}.
+
+\bibitem{GHS17}
+Mika G{\"o}{\"o}s, Juho Hirvonen, and Jukka Suomela.
+Linear-in-$\Delta$ lower bounds in the LOCAL model.
+\emph{Distributed Computing}, 30:325--338, 2017.
+\href{https://doi.org/10.1007/s00446-015-0245-8}{doi:10.1007/s00446-015-0245-8}.
+\href{https://arxiv.org/abs/1304.1007}{arXiv:1304.1007}.
+
+\bibitem{Dahal24}
+Sameep Dahal and Jukka Suomela.
+Distributed half-integral matching and beyond.
+\emph{Theoretical Computer Science}, 982:114278, 2024.
+\href{https://doi.org/10.1016/j.tcs.2023.114278}{doi:10.1016/j.tcs.2023.114278}.
+\href{https://arxiv.org/abs/2303.05250}{arXiv:2303.05250}.
+
+\bibitem{FHK11}
+Patrik Flor{\'e}en, Marja Hassinen, Joel Kaasinen, Petteri Kaski,
+Topi Musto, and Jukka Suomela.
+Local approximability of max-min and min-max linear programs.
+\emph{Theory of Computing Systems}, 49(4):672--697, 2011.
+\href{https://doi.org/10.1007/s00224-010-9303-6}{doi:10.1007/s00224-010-9303-6}.
+
+\bibitem{ER60}
+Paul Erd{\H o}s and Richard Rado.
+Intersection theorems for systems of sets.
+\emph{Journal of the London Mathematical Society}, s1-35(1):85--90, 1960.
+\href{https://doi.org/10.1112/jlms/s1-35.1.85}{doi:10.1112/jlms/s1-35.1.85}.
+
+\bibitem{Diestel25}
+Reinhard Diestel.
+\emph{Graph Theory}, sixth edition.
+Graduate Texts in Mathematics 173. Springer, 2025.
+\href{https://doi.org/10.1007/978-3-662-70107-2}{doi:10.1007/978-3-662-70107-2}.
+
+\end{thebibliography}
+
+\end{document}
