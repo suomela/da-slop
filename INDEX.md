@@ -12,3 +12,4 @@ See [README.md](README.md) for explanations and background.
 | [Optimal coloring](optimal-coloring/README.md) | Magnús M. Halldórsson | H | — |
 | [From bounded dependence to det-LOCAL](bounded-dependence-metric-control/README.md) | Francesco D'Amore, Timothé Picavet | H | Francesco D'Amore, Timothé Picavet |
 | [Planar dominating set approximation](planar-mds/README.md) | Jukka Suomela | F | — |
+| [Sinkless orientation in dynamic-LOCAL](sinkless-orientation-dynamic-local/README.md) | Jukka Suomela | H | — |
