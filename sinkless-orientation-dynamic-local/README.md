@@ -33,3 +33,7 @@ GPT-6 in Codex
 ## Confidence
 
 The algorithm idea is simple and makes sense to me.
+
+## Assigned to
+
+Filippo Casagrande and Tim Göttlicher
